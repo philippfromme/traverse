@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Traverse — Activities</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/fonts/mozilla-text/index.css" />
+    <link rel="stylesheet" href="/fonts/mozilla-headline/index.css" />
+    <link rel="stylesheet" href="/fonts/material-symbols/outlined.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "lit": "https://esm.sh/lit@3"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <app-header active="activities"></app-header>
+    <activity-list-page></activity-list-page>
+    <script type="module" src="/components/app-header.js"></script>
+    <script type="module" src="/components/activity-list-page.js"></script>
+    <app-footer></app-footer>
+    <script type="module" src="/components/app-footer.js"></script>
+  </body>
+</html>

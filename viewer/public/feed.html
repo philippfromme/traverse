@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Traverse — Feed</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/fonts/mozilla-text/index.css" />
+    <link rel="stylesheet" href="/fonts/mozilla-headline/index.css" />
+    <link rel="stylesheet" href="/fonts/material-symbols/outlined.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/maplibre-gl@5.23.0/dist/maplibre-gl.css"
+    />
+    <script src="https://unpkg.com/maplibre-gl@5.23.0/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/maplibre-contour@0.0.5/dist/index.min.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "lit": "https://esm.sh/lit@3"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <app-header active="feed"></app-header>
+    <feed-page></feed-page>
+    <script type="module" src="/components/app-header.js"></script>
+    <script type="module" src="/components/feed-page.js"></script>
+    <app-footer></app-footer>
+    <script type="module" src="/components/app-footer.js"></script>
+  </body>
+</html>

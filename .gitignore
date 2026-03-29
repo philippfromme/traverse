@@ -1,0 +1,7 @@
+node_modules/
+.env
+gpx/
+tcx/
+activity-index.json
+activity-data.json
+.browser-data/
