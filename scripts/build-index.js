@@ -5,6 +5,7 @@ import { XMLParser } from "fast-xml-parser";
 const GPX_DIR = path.resolve("gpx");
 const TCX_DIR = path.resolve("tcx");
 const INDEX_FILE = path.resolve("activity-index.json");
+const HEATMAP_FILE = path.resolve("heatmap-data.json");
 const ACTIVITY_DATA_FILE = path.resolve("activity-data.json");
 const NOMINATIM_DELAY_MS = 1500; // Nominatim requires max 1 req/s, use 1.5s for safety
 
@@ -350,6 +351,36 @@ async function main() {
 
   fs.writeFileSync(INDEX_FILE, JSON.stringify(activities, null, 2));
   console.log(`\nIndexed ${activities.length} activities → ${INDEX_FILE}`);
+
+  // build heatmap data: downsampled trackpoints grouped by type
+  console.log(`\nBuilding heatmap data...`);
+  const heatmapByType = {};
+  let totalPoints = 0;
+
+  for (const file of gpxFiles) {
+    const activityId = path.basename(file, ".gpx");
+    const gpxPath = path.join(GPX_DIR, file);
+
+    try {
+      const gpxData = parseGpxFile(gpxPath);
+      if (!gpxData || !gpxData.trackpoints.length) continue;
+
+      const type = gpxData.type || "unknown";
+      if (!heatmapByType[type]) heatmapByType[type] = [];
+
+      const step = Math.max(1, Math.floor(gpxData.trackpoints.length / 100));
+      for (let i = 0; i < gpxData.trackpoints.length; i += step) {
+        const pt = gpxData.trackpoints[i];
+        heatmapByType[type].push([pt.lon, pt.lat]);
+        totalPoints++;
+      }
+    } catch {
+      // skip unparseable files
+    }
+  }
+
+  fs.writeFileSync(HEATMAP_FILE, JSON.stringify(heatmapByType));
+  console.log(`Heatmap: ${totalPoints} points → ${HEATMAP_FILE}`);
 }
 
 main();

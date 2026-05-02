@@ -35,6 +35,11 @@ class AppHeader extends LitElement {
             >Calendar</a
           >
           <a
+            href="/heatmap"
+            class="header-link ${this.active === "heatmap" ? "active" : ""}"
+            >Heatmap</a
+          >
+          <a
             href="/stats"
             class="header-link ${this.active === "stats" ? "active" : ""}"
             >Stats</a

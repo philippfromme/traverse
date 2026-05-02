@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GPX_DIR = path.resolve("gpx");
 const PUBLIC_DIR = path.join(__dirname, "public");
 const INDEX_FILE = path.resolve("activity-index.json");
+const HEATMAP_FILE = path.resolve("heatmap-data.json");
 const PORT = 3000;
 
 const parser = new XMLParser({
@@ -201,6 +202,44 @@ app.get("/api/activities/:id/track", (req, res) => {
   }
 });
 
+// Load pre-computed heatmap data
+function loadHeatmapData() {
+  if (!fs.existsSync(HEATMAP_FILE)) {
+    console.log("Heatmap data not found, building index...");
+    buildIndex();
+  }
+
+  const byType = JSON.parse(fs.readFileSync(HEATMAP_FILE, "utf-8"));
+  const allPoints = [];
+  for (const points of Object.values(byType)) {
+    allPoints.push(...points);
+  }
+  console.log(`Loaded ${allPoints.length} heatmap points.`);
+  return { allPoints, byType };
+}
+
+const heatmapData = loadHeatmapData();
+
+// API: heatmap data (downsampled trackpoints from all activities)
+app.get("/api/heatmap", (req, res) => {
+  const { type } = req.query;
+  const points = type && heatmapData.byType[type]
+    ? heatmapData.byType[type]
+    : heatmapData.allPoints;
+
+  const features = points.map((coord) => ({
+    type: "Feature",
+    geometry: { type: "Point", coordinates: coord },
+    properties: {},
+  }));
+
+  res.json({
+    type: "FeatureCollection",
+    features,
+    types: activityTypes,
+  });
+});
+
 // SPA fallback: serve index.html for /activity/:id routes
 app.get("/activity/:id", (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, "activity.html"));
@@ -212,6 +251,10 @@ app.get("/activities", (req, res) => {
 
 app.get("/calendar", (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, "calendar.html"));
+});
+
+app.get("/heatmap", (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, "heatmap.html"));
 });
 
 app.get("/stats", (req, res) => {
