@@ -229,15 +229,16 @@ async function reverseGeocode(lat, lon, retries = 5) {
 }
 
 async function main() {
-  console.log(`Parsing activity files...`);
+  const startTime = Date.now();
 
   const gpxFiles = fs.readdirSync(GPX_DIR).filter((f) => f.endsWith(".gpx"));
   const tcxFiles = fs.existsSync(TCX_DIR)
     ? new Set(fs.readdirSync(TCX_DIR).filter((f) => f.endsWith(".tcx")).map((f) => path.basename(f, ".tcx")))
     : new Set();
-  const activities = [];
 
-  // load existing index to reuse already-geocoded locations
+  console.log(`Found ${gpxFiles.length} GPX files, ${tcxFiles.size} TCX files.`);
+
+  // load existing index to reuse already-geocoded locations and skip unchanged activities
   let existingIndex = {};
   if (fs.existsSync(INDEX_FILE)) {
     try {
@@ -255,56 +256,151 @@ async function main() {
   if (fs.existsSync(ACTIVITY_DATA_FILE)) {
     try {
       activityData = JSON.parse(fs.readFileSync(ACTIVITY_DATA_FILE, "utf-8"));
-      console.log(
-        `Loaded activity metadata for ${Object.keys(activityData).length} activities.`,
-      );
     } catch {
       // ignore corrupt file
     }
   }
 
-  for (const file of gpxFiles) {
-    const activityId = path.basename(file, ".gpx");
-    const gpxPath = path.join(GPX_DIR, file);
+  // determine which activities need (re-)processing
+  const existingIds = new Set(Object.keys(existingIndex));
+  const newFiles = gpxFiles.filter((f) => !existingIds.has(path.basename(f, ".gpx")));
+  const unchangedFiles = gpxFiles.filter((f) => existingIds.has(path.basename(f, ".gpx")));
 
-    try {
-      const gpxData = parseGpxFile(gpxPath);
-      if (!gpxData) continue;
+  console.log(`Processing ${newFiles.length} new activities, reusing ${unchangedFiles.length} cached.`);
 
-      // prefer TCX data if available (has HR, calories, accurate duration)
-      let tcxData = null;
-      if (tcxFiles.has(activityId)) {
-        try {
-          tcxData = parseTcxFile(path.join(TCX_DIR, `${activityId}.tcx`));
-        } catch (err) {
-          console.warn(`  Failed to parse TCX for ${activityId}: ${err.message}`);
-        }
+  // reuse cached activities
+  const activities = unchangedFiles.map((f) => existingIndex[path.basename(f, ".gpx")]);
+
+  // only rebuild heatmap if there are new activities or heatmap file doesn't exist
+  const needsHeatmapRebuild = newFiles.length > 0 || !fs.existsSync(HEATMAP_FILE);
+
+  if (needsHeatmapRebuild) {
+    console.log(`Building heatmap data...`);
+    const heatmapByType = {};
+    let totalPoints = 0;
+
+    for (let i = 0; i < gpxFiles.length; i++) {
+      if (i > 0 && i % 500 === 0) {
+        console.log(`  Heatmap: processed ${i}/${gpxFiles.length} files...`);
       }
 
-      const distance = gpxData.hasTrack ? computeDistance(gpxData.trackpoints) : (tcxData?.distance ?? 0);
-      const gpxDuration = gpxData.hasTrack ? computeDuration(gpxData.trackpoints) : null;
-      const meta = activityData[activityId] || {};
+      const file = gpxFiles[i];
+      const gpxPath = path.join(GPX_DIR, file);
+      const isNew = !existingIds.has(path.basename(file, ".gpx"));
 
-      activities.push({
-        id: activityId,
-        name: gpxData.name,
-        type: gpxData.type,
-        time: gpxData.time,
-        hasTrack: gpxData.hasTrack || (tcxData?.hasTrack ?? false),
-        trackpointCount: gpxData.trackpointCount,
-        distance,
-        duration: tcxData?.duration ?? meta.duration ?? gpxDuration,
-        averageHR: tcxData?.averageHR ?? meta.averageHR ?? null,
-        maxHR: tcxData?.maxHR ?? meta.maxHR ?? null,
-        calories: tcxData?.calories ?? meta.calories ?? null,
-        maxSpeed: meta.maxSpeed ?? null,
-        startLat: gpxData.startLat ?? tcxData?.startLat ?? null,
-        startLon: gpxData.startLon ?? tcxData?.startLon ?? null,
-        location: existingIndex[activityId]?.location || null,
-      });
+      try {
+        const gpxData = parseGpxFile(gpxPath);
+        if (!gpxData) continue;
+
+        // collect heatmap points
+        if (gpxData.trackpoints.length > 0) {
+          const type = gpxData.type || "unknown";
+          if (!heatmapByType[type]) heatmapByType[type] = [];
+
+          const step = Math.max(1, Math.floor(gpxData.trackpoints.length / 100));
+          for (let j = 0; j < gpxData.trackpoints.length; j += step) {
+            const pt = gpxData.trackpoints[j];
+            heatmapByType[type].push([pt.lon, pt.lat]);
+            totalPoints++;
+          }
+        }
+
+        // only build index entry for new activities
+        if (isNew) {
+          const activityId = path.basename(file, ".gpx");
+
+        // only parse TCX if activity-data.json doesn't already have the metadata
+        let tcxData = null;
+        const meta = activityData[activityId] || {};
+        const hasMetadata = meta.duration && meta.averageHR;
+
+        if (!hasMetadata && tcxFiles.has(activityId)) {
+          try {
+            tcxData = parseTcxFile(path.join(TCX_DIR, `${activityId}.tcx`));
+          } catch (err) {
+            console.warn(`  Failed to parse TCX for ${activityId}: ${err.message}`);
+          }
+        }
+
+        const distance = gpxData.hasTrack ? computeDistance(gpxData.trackpoints) : (tcxData?.distance ?? 0);
+        const gpxDuration = gpxData.hasTrack ? computeDuration(gpxData.trackpoints) : null;
+
+        activities.push({
+          id: activityId,
+          name: gpxData.name,
+          type: gpxData.type,
+          time: gpxData.time,
+          hasTrack: gpxData.hasTrack || (tcxData?.hasTrack ?? false),
+          trackpointCount: gpxData.trackpointCount,
+          distance,
+          duration: tcxData?.duration ?? meta.duration ?? gpxDuration,
+          averageHR: tcxData?.averageHR ?? meta.averageHR ?? null,
+          maxHR: tcxData?.maxHR ?? meta.maxHR ?? null,
+          calories: tcxData?.calories ?? meta.calories ?? null,
+          maxSpeed: meta.maxSpeed ?? null,
+          startLat: gpxData.startLat ?? tcxData?.startLat ?? null,
+          startLon: gpxData.startLon ?? tcxData?.startLon ?? null,
+          location: null,
+        });
+      }
     } catch (err) {
       console.warn(`  Failed to parse ${file}: ${err.message}`);
     }
+  }
+
+    console.log(`  Heatmap: ${totalPoints} points across ${Object.keys(heatmapByType).length} types.`);
+    fs.writeFileSync(HEATMAP_FILE, JSON.stringify(heatmapByType));
+  } else if (newFiles.length > 0) {
+    // only new files to process (heatmap already exists) — parse just the new ones
+    console.log(`Parsing ${newFiles.length} new GPX files...`);
+
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i];
+      const activityId = path.basename(file, ".gpx");
+      const gpxPath = path.join(GPX_DIR, file);
+
+      try {
+        const gpxData = parseGpxFile(gpxPath);
+        if (!gpxData) continue;
+
+        let tcxData = null;
+        const meta = activityData[activityId] || {};
+        const hasMetadata = meta.duration && meta.averageHR;
+
+        if (!hasMetadata && tcxFiles.has(activityId)) {
+          try {
+            tcxData = parseTcxFile(path.join(TCX_DIR, `${activityId}.tcx`));
+          } catch (err) {
+            console.warn(`  Failed to parse TCX for ${activityId}: ${err.message}`);
+          }
+        }
+
+        const distance = gpxData.hasTrack ? computeDistance(gpxData.trackpoints) : (tcxData?.distance ?? 0);
+        const gpxDuration = gpxData.hasTrack ? computeDuration(gpxData.trackpoints) : null;
+
+        activities.push({
+          id: activityId,
+          name: gpxData.name,
+          type: gpxData.type,
+          time: gpxData.time,
+          hasTrack: gpxData.hasTrack || (tcxData?.hasTrack ?? false),
+          trackpointCount: gpxData.trackpointCount,
+          distance,
+          duration: tcxData?.duration ?? meta.duration ?? gpxDuration,
+          averageHR: tcxData?.averageHR ?? meta.averageHR ?? null,
+          maxHR: tcxData?.maxHR ?? meta.maxHR ?? null,
+          calories: tcxData?.calories ?? meta.calories ?? null,
+          maxSpeed: meta.maxSpeed ?? null,
+          startLat: gpxData.startLat ?? tcxData?.startLat ?? null,
+          startLon: gpxData.startLon ?? tcxData?.startLon ?? null,
+          location: null,
+        });
+      } catch (err) {
+        console.warn(`  Failed to parse ${file}: ${err.message}`);
+      }
+    }
+  } else {
+    console.log(`Nothing to do, all activities cached.`);
   }
 
   // reverse geocode activities that don't have a location yet
@@ -313,7 +409,7 @@ async function main() {
   );
 
   if (toGeocode.length > 0) {
-    console.log(`\nReverse geocoding ${toGeocode.length} activities...`);
+    console.log(`Reverse geocoding ${toGeocode.length} activities...`);
 
     for (let i = 0; i < toGeocode.length; i++) {
       const a = toGeocode[i];
@@ -350,37 +446,9 @@ async function main() {
   });
 
   fs.writeFileSync(INDEX_FILE, JSON.stringify(activities, null, 2));
-  console.log(`\nIndexed ${activities.length} activities → ${INDEX_FILE}`);
 
-  // build heatmap data: downsampled trackpoints grouped by type
-  console.log(`\nBuilding heatmap data...`);
-  const heatmapByType = {};
-  let totalPoints = 0;
-
-  for (const file of gpxFiles) {
-    const activityId = path.basename(file, ".gpx");
-    const gpxPath = path.join(GPX_DIR, file);
-
-    try {
-      const gpxData = parseGpxFile(gpxPath);
-      if (!gpxData || !gpxData.trackpoints.length) continue;
-
-      const type = gpxData.type || "unknown";
-      if (!heatmapByType[type]) heatmapByType[type] = [];
-
-      const step = Math.max(1, Math.floor(gpxData.trackpoints.length / 100));
-      for (let i = 0; i < gpxData.trackpoints.length; i += step) {
-        const pt = gpxData.trackpoints[i];
-        heatmapByType[type].push([pt.lon, pt.lat]);
-        totalPoints++;
-      }
-    } catch {
-      // skip unparseable files
-    }
-  }
-
-  fs.writeFileSync(HEATMAP_FILE, JSON.stringify(heatmapByType));
-  console.log(`Heatmap: ${totalPoints} points → ${HEATMAP_FILE}`);
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`Indexed ${activities.length} activities in ${elapsed}s → ${INDEX_FILE}`);
 }
 
 main();
