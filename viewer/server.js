@@ -7,10 +7,11 @@ import { XMLParser } from "fast-xml-parser";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const GPX_DIR = path.resolve("gpx");
+const DATA_DIR = path.resolve(process.env.DATA_DIR || ".");
+const GPX_DIR = path.join(DATA_DIR, "gpx");
 const PUBLIC_DIR = path.join(__dirname, "public");
-const INDEX_FILE = path.resolve("activity-index.json");
-const HEATMAP_FILE = path.resolve("heatmap-data.json");
+const INDEX_FILE = path.join(DATA_DIR, "activity-index.json");
+const HEATMAP_FILE = path.join(DATA_DIR, "heatmap-data.json");
 const PORT = 3000;
 
 const parser = new XMLParser({
@@ -65,6 +66,7 @@ function buildIndex() {
   console.log("Index not found, building...");
   execFileSync(process.execPath, [path.resolve("scripts/build-index.js")], {
     stdio: "inherit",
+    env: { ...process.env, DATA_DIR: DATA_DIR },
   });
 }
 

@@ -2,10 +2,11 @@ import fs from "fs";
 import path from "path";
 import { XMLParser } from "fast-xml-parser";
 
-const GPX_DIR = path.resolve("gpx");
-const TCX_DIR = path.resolve("tcx");
-const INDEX_FILE = path.resolve("activity-index.json");
-const HEATMAP_FILE = path.resolve("heatmap-data.json");
+const DATA_DIR = path.resolve(process.env.DATA_DIR || ".");
+const GPX_DIR = path.join(DATA_DIR, "gpx");
+const TCX_DIR = path.join(DATA_DIR, "tcx");
+const INDEX_FILE = path.join(DATA_DIR, "activity-index.json");
+const HEATMAP_FILE = path.join(DATA_DIR, "heatmap-data.json");
 const NOMINATIM_DELAY_MS = 1500; // Nominatim requires max 1 req/s, use 1.5s for safety
 
 const parser = new XMLParser({
