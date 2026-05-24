@@ -1,6 +1,6 @@
 # Traverse
 
-Your GPX activities on a self-hosted viewer. Fetches activities from Garmin Connect, indexes them with reverse geocoding, and serves a fast, searchable UI with maps and stats.
+Your Garmin activities in a self-hosted viewer. Fetches activity data from Garmin Connect, indexes it with reverse geocoding, and serves a fast, searchable UI with maps and stats.
 
 ![](docs/activities.png)
 ![](docs/activity.png)
@@ -20,10 +20,16 @@ Create a `.env` file (see `.env.example`) with your Garmin credentials if using 
 ### Fetch activities from Garmin
 
 ```
-npm run fetch-gpx:garmin
+npm run fetch-garmin
 ```
 
-Opens a browser to log in to Garmin Connect and downloads all GPX files to `gpx/`. Use `npm run fetch-gpx:headed` to see the browser.
+Opens a browser to log in to Garmin Connect and downloads:
+
+- GPX files to `gpx/` (track geometry and activity basics)
+- TCX files to `tcx/` (detailed metrics like HR/duration/calories when available)
+- API activity metadata to `activity-data.json`
+
+Use `npm run fetch-garmin:headed` to run with a visible browser.
 
 ### Build the index
 
@@ -31,7 +37,18 @@ Opens a browser to log in to Garmin Connect and downloads all GPX files to `gpx/
 npm run build-index
 ```
 
-Parses all GPX files and reverse geocodes activity locations via OpenStreetMap Nominatim. Results are cached — only new activities get geocoded on subsequent runs.
+Builds generated artifacts:
+
+- `activity-index.json` (activity index for the viewer)
+- `heatmap-data.json` (precomputed heatmap points by activity type)
+
+During indexing:
+
+- GPX is used for route/track points and heatmap generation.
+- Duration/HR/calories are taken from TCX or API metadata when available.
+- GPX-derived timing is used as a fallback when richer metadata is missing.
+
+Activity locations are reverse geocoded via OpenStreetMap Nominatim. Results are cached, so only new activities get geocoded on subsequent runs.
 
 ### Start the viewer
 
@@ -49,10 +66,14 @@ Opens `http://localhost:3000` with:
 
 ```
 scripts/          Utility scripts
-  fetch-garmin.js   Fetch GPX files from Garmin Connect
-  build-index.js    Parse GPX files and build activity index
+  fetch-garmin.js   Fetch Garmin metadata plus GPX/TCX exports
+  build-index.js    Build index + heatmap from GPX with TCX/API enrichment
 viewer/           Web viewer
   server.js         Express server and API
   public/           Frontend (HTML, CSS, JS)
 gpx/              GPX files (gitignored)
+tcx/              TCX files (gitignored)
+activity-data.json  Cached Garmin activity metadata (gitignored)
+activity-index.json Generated activity index (gitignored)
+heatmap-data.json  Generated heatmap data (gitignored)
 ```
