@@ -93,6 +93,14 @@ docker build -t traverse .
 docker run -d -p 3000:3000 -v /path/to/data:/app/data traverse
 ```
 
+## Releasing
+
+```
+npm run release
+```
+
+Uses [np](https://github.com/sindresorhus/np) to bump the version, create a git tag, and push. The GitHub Action then builds and publishes the Docker image to GHCR.
+
 ## Project Structure
 
 ```
