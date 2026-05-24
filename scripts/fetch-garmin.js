@@ -55,11 +55,13 @@ async function getCredentials() {
 
 async function login(page, email, password) {
   console.log("Navigating to Garmin SSO...");
-  await page.goto(GARMIN_SSO_URL, { waitUntil: "domcontentloaded" });
+  await page.goto(GARMIN_SSO_URL, { waitUntil: "networkidle" });
+
+  await sleep(2000);
 
   if (email && password) {
     console.log("Filling in credentials (auto-login)...");
-    await page.waitForSelector('input[name="email"]', { timeout: 10000 });
+    await page.waitForSelector('input[name="email"]', { timeout: 30000 });
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
     await page.click('button[type="submit"]');
@@ -306,6 +308,9 @@ async function main() {
     headless: !headed,
     channel: "chrome",
     args: ["--disable-blink-features=AutomationControlled"],
+    viewport: { width: 1280, height: 720 },
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
   });
 
   const page = context.pages()[0] || (await context.newPage());
