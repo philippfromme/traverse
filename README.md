@@ -61,6 +61,38 @@ Opens `http://localhost:3000` with:
 - Activity detail pages with map and stats
 - Stats overview with world map (clustered) and per-type breakdowns with charts
 
+## Docker
+
+A Docker image is published to GitHub Container Registry when a version tag is pushed (e.g., `git tag v1.0.0 && git push --tags`).
+
+### Pull and run
+
+```
+docker run -d \
+  -p 3000:3000 \
+  -v /data/traverse:/app/data \
+  ghcr.io/philippfromme/traverse:latest
+```
+
+Your data directory should contain:
+
+```
+/data/traverse/
+  gpx/                  GPX files (your backup)
+  tcx/                  TCX files (your backup)
+  activity-index.json   Generated on first start (persisted automatically)
+  heatmap-data.json     Generated on first start (persisted automatically)
+```
+
+The server builds `activity-index.json` and `heatmap-data.json` automatically on first start if they don't exist. On subsequent starts, only new activities are processed.
+
+### Build locally
+
+```
+docker build -t traverse .
+docker run -d -p 3000:3000 -v /path/to/data:/app/data traverse
+```
+
 ## Project Structure
 
 ```

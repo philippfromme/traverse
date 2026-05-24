@@ -1,0 +1,11 @@
+node_modules
+gpx
+tcx
+docs
+*.gpx
+*.tcx
+activity-index.json
+heatmap-data.json
+.git
+.github
+.env
