@@ -10,7 +10,7 @@
     "fetch-garmin:headed": "node scripts/fetch-garmin.js --headed",
     "start": "node viewer/server.js",
     "screenshots": "node scripts/screenshots.js",
-    "release": "npx np --no-publish"
+    "release": "npx np --no-publish --no-tests"
   },
   "keywords": [],
   "author": "",
