@@ -148,6 +148,18 @@ feed-page {
   display: flex;
   gap: 4px;
   font-size: 0.9rem;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.header-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
 }
 
 .header-link {
@@ -749,7 +761,8 @@ feed-page {
 .feed-sidebar {
   position: sticky;
   top: 72px;
-  height: calc(100vh - 72px);
+  max-height: calc(100vh - 72px);
+  overflow-y: auto;
 }
 
 .feed-main {
@@ -770,7 +783,7 @@ feed-page {
 
 .feed-summary-title {
   font-family: "Mozilla Headline", sans-serif;
-  font-size: 2rem;
+  font-size: clamp(1.2rem, 3vh, 2rem);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -793,21 +806,21 @@ feed-page {
 
 .feed-summary-value {
   font-family: "Mozilla Headline", sans-serif;
-  font-size: 8.4rem;
+  font-size: clamp(2rem, 7vh, 5rem);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.1;
   color: var(--m24-white);
 }
 
 .feed-summary-label {
-  font-size: 24px;
+  font-size: clamp(14px, 2vh, 20px);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .feed-summary-trend {
-  font-size: 24px;
-  margin-top: 4px;
+  font-size: clamp(14px, 2vh, 20px);
+  margin-top: 2px;
 }
 
 .feed-list {
@@ -1124,9 +1137,38 @@ feed-page {
     font-size: 1.1rem;
   }
 
+  .header-hamburger {
+    display: block;
+  }
+
+  .header-nav {
+    display: none;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    padding: 12px 20px;
+    gap: 0;
+  }
+
+  .header-nav.open {
+    display: flex;
+  }
+
   .header-link {
-    margin: 0 5px;
-    font-size: 0.85rem;
+    margin: 0;
+    padding: 12px 0;
+    font-size: 1rem;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .header-link:last-child {
+    border-bottom: none;
   }
 
   .table-header {
@@ -1201,6 +1243,12 @@ feed-page {
 
   .feed-card-map {
     height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .feed-summary-grid {
+    flex-direction: column;
   }
 }
 
