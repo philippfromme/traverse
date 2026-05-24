@@ -134,6 +134,10 @@ app.use(
 
 app.use(express.static(PUBLIC_DIR));
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 // API: summary stats
 app.get("/api/summary", (req, res) => {
   res.json(activitySummary);
