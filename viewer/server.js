@@ -172,7 +172,7 @@ app.get("/api/activities/:id", (req, res) => {
   try {
     const data = parseGpxFile(filePath);
 
-    // enrich with index metadata (location, maxSpeed)
+    // enrich with index metadata
     const indexed = activityIndex.find((a) => a.id === activityId);
     const location = indexed?.location || null;
     const maxSpeed = indexed?.maxSpeed || null;

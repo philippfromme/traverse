@@ -19,7 +19,6 @@ const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 5000;
 const GPX_DIR = path.resolve("gpx");
 const TCX_DIR = path.resolve("tcx");
-const ACTIVITY_DATA_FILE = path.resolve("activity-data.json");
 
 async function prompt(question) {
   const rl = readline.createInterface({
@@ -363,37 +362,6 @@ async function main() {
 
     fs.mkdirSync(GPX_DIR, { recursive: true });
     fs.mkdirSync(TCX_DIR, { recursive: true });
-
-    // save activity metadata from the list API (includes HR, duration, calories, etc.)
-    const activityData = {};
-    for (const a of activities) {
-      activityData[a.activityId] = {
-        duration: a.duration ?? null,
-        movingDuration: a.movingDuration ?? null,
-        averageHR: a.averageHR ?? null,
-        maxHR: a.maxHR ?? null,
-        calories: a.calories ?? null,
-        elevationGain: a.elevationGain ?? null,
-        averageSpeed: a.averageSpeed ?? null,
-        maxSpeed: a.maxSpeed ?? null,
-      };
-    }
-
-    // merge with existing data to preserve previously fetched activities
-    let existingData = {};
-    if (fs.existsSync(ACTIVITY_DATA_FILE)) {
-      try {
-        existingData = JSON.parse(fs.readFileSync(ACTIVITY_DATA_FILE, "utf-8"));
-      } catch {
-        // ignore corrupt file
-      }
-    }
-
-    const mergedData = { ...existingData, ...activityData };
-    fs.writeFileSync(ACTIVITY_DATA_FILE, JSON.stringify(mergedData, null, 2));
-    console.log(
-      `Saved activity metadata for ${Object.keys(mergedData).length} activities.`,
-    );
 
     const activityIds = activities.map((a) => a.activityId);
     const session = { headers: apiHeaders };

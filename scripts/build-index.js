@@ -6,7 +6,6 @@ const GPX_DIR = path.resolve("gpx");
 const TCX_DIR = path.resolve("tcx");
 const INDEX_FILE = path.resolve("activity-index.json");
 const HEATMAP_FILE = path.resolve("heatmap-data.json");
-const ACTIVITY_DATA_FILE = path.resolve("activity-data.json");
 const NOMINATIM_DELAY_MS = 1500; // Nominatim requires max 1 req/s, use 1.5s for safety
 
 const parser = new XMLParser({
@@ -44,6 +43,31 @@ function computeDuration(trackpoints) {
   const last = trackpoints[trackpoints.length - 1].time;
   if (!first || !last) return null;
   return (new Date(last) - new Date(first)) / 1000;
+}
+
+function computeMaxSpeed(trackpoints, windowSize = 5) {
+  if (trackpoints.length < 2) return null;
+
+  let maxSpeed = 0;
+
+  for (let i = windowSize; i < trackpoints.length; i++) {
+    const start = trackpoints[i - windowSize];
+    const end = trackpoints[i];
+
+    if (!start.time || !end.time) continue;
+
+    const dt = (new Date(end.time) - new Date(start.time)) / 1000;
+    if (dt <= 0) continue;
+
+    const dist = haversineDistance(start.lat, start.lon, end.lat, end.lon);
+    const speed = dist / dt; // m/s
+
+    if (speed > maxSpeed) {
+      maxSpeed = speed;
+    }
+  }
+
+  return maxSpeed > 0 ? maxSpeed : null;
 }
 
 function parseGpxFile(filePath) {
@@ -251,16 +275,6 @@ async function main() {
     }
   }
 
-  // load activity metadata from Garmin API (HR, duration, etc.)
-  let activityData = {};
-  if (fs.existsSync(ACTIVITY_DATA_FILE)) {
-    try {
-      activityData = JSON.parse(fs.readFileSync(ACTIVITY_DATA_FILE, "utf-8"));
-    } catch {
-      // ignore corrupt file
-    }
-  }
-
   // determine which activities need (re-)processing
   const existingIds = new Set(Object.keys(existingIndex));
   const newFiles = gpxFiles.filter((f) => !existingIds.has(path.basename(f, ".gpx")));
@@ -309,40 +323,37 @@ async function main() {
         if (isNew) {
           const activityId = path.basename(file, ".gpx");
 
-        // only parse TCX if activity-data.json doesn't already have the metadata
-        let tcxData = null;
-        const meta = activityData[activityId] || {};
-        const hasMetadata = meta.duration && meta.averageHR;
-
-        if (!hasMetadata && tcxFiles.has(activityId)) {
-          try {
-            tcxData = parseTcxFile(path.join(TCX_DIR, `${activityId}.tcx`));
-          } catch (err) {
-            console.warn(`  Failed to parse TCX for ${activityId}: ${err.message}`);
+          let tcxData = null;
+          if (tcxFiles.has(activityId)) {
+            try {
+              tcxData = parseTcxFile(path.join(TCX_DIR, `${activityId}.tcx`));
+            } catch (err) {
+              console.warn(`  Failed to parse TCX for ${activityId}: ${err.message}`);
+            }
           }
+
+          const distance = gpxData.hasTrack ? computeDistance(gpxData.trackpoints) : (tcxData?.distance ?? 0);
+          const gpxDuration = gpxData.hasTrack ? computeDuration(gpxData.trackpoints) : null;
+          const maxSpeed = gpxData.hasTrack ? computeMaxSpeed(gpxData.trackpoints) : null;
+
+          activities.push({
+            id: activityId,
+            name: gpxData.name,
+            type: gpxData.type,
+            time: gpxData.time,
+            hasTrack: gpxData.hasTrack || (tcxData?.hasTrack ?? false),
+            trackpointCount: gpxData.trackpointCount,
+            distance,
+            duration: tcxData?.duration ?? gpxDuration,
+            maxSpeed,
+            averageHR: tcxData?.averageHR ?? null,
+            maxHR: tcxData?.maxHR ?? null,
+            calories: tcxData?.calories ?? null,
+            startLat: gpxData.startLat ?? tcxData?.startLat ?? null,
+            startLon: gpxData.startLon ?? tcxData?.startLon ?? null,
+            location: null,
+          });
         }
-
-        const distance = gpxData.hasTrack ? computeDistance(gpxData.trackpoints) : (tcxData?.distance ?? 0);
-        const gpxDuration = gpxData.hasTrack ? computeDuration(gpxData.trackpoints) : null;
-
-        activities.push({
-          id: activityId,
-          name: gpxData.name,
-          type: gpxData.type,
-          time: gpxData.time,
-          hasTrack: gpxData.hasTrack || (tcxData?.hasTrack ?? false),
-          trackpointCount: gpxData.trackpointCount,
-          distance,
-          duration: tcxData?.duration ?? meta.duration ?? gpxDuration,
-          averageHR: tcxData?.averageHR ?? meta.averageHR ?? null,
-          maxHR: tcxData?.maxHR ?? meta.maxHR ?? null,
-          calories: tcxData?.calories ?? meta.calories ?? null,
-          maxSpeed: meta.maxSpeed ?? null,
-          startLat: gpxData.startLat ?? tcxData?.startLat ?? null,
-          startLon: gpxData.startLon ?? tcxData?.startLon ?? null,
-          location: null,
-        });
-      }
     } catch (err) {
       console.warn(`  Failed to parse ${file}: ${err.message}`);
     }
@@ -364,10 +375,7 @@ async function main() {
         if (!gpxData) continue;
 
         let tcxData = null;
-        const meta = activityData[activityId] || {};
-        const hasMetadata = meta.duration && meta.averageHR;
-
-        if (!hasMetadata && tcxFiles.has(activityId)) {
+        if (tcxFiles.has(activityId)) {
           try {
             tcxData = parseTcxFile(path.join(TCX_DIR, `${activityId}.tcx`));
           } catch (err) {
@@ -377,6 +385,7 @@ async function main() {
 
         const distance = gpxData.hasTrack ? computeDistance(gpxData.trackpoints) : (tcxData?.distance ?? 0);
         const gpxDuration = gpxData.hasTrack ? computeDuration(gpxData.trackpoints) : null;
+        const maxSpeed = gpxData.hasTrack ? computeMaxSpeed(gpxData.trackpoints) : null;
 
         activities.push({
           id: activityId,
@@ -386,11 +395,11 @@ async function main() {
           hasTrack: gpxData.hasTrack || (tcxData?.hasTrack ?? false),
           trackpointCount: gpxData.trackpointCount,
           distance,
-          duration: tcxData?.duration ?? meta.duration ?? gpxDuration,
-          averageHR: tcxData?.averageHR ?? meta.averageHR ?? null,
-          maxHR: tcxData?.maxHR ?? meta.maxHR ?? null,
-          calories: tcxData?.calories ?? meta.calories ?? null,
-          maxSpeed: meta.maxSpeed ?? null,
+          duration: tcxData?.duration ?? gpxDuration,
+          maxSpeed,
+          averageHR: tcxData?.averageHR ?? null,
+          maxHR: tcxData?.maxHR ?? null,
+          calories: tcxData?.calories ?? null,
           startLat: gpxData.startLat ?? tcxData?.startLat ?? null,
           startLon: gpxData.startLon ?? tcxData?.startLon ?? null,
           location: null,
