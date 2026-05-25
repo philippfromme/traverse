@@ -80,10 +80,10 @@ function loadIndex() {
   return activities;
 }
 
-const activityIndex = loadIndex();
+let activityIndex = loadIndex();
 
 // collect unique types for filter dropdown
-const activityTypes = [...new Set(activityIndex.map((a) => a.type))]
+let activityTypes = [...new Set(activityIndex.map((a) => a.type))]
   .filter(Boolean)
   .sort();
 
@@ -113,7 +113,7 @@ function buildSummary(activities) {
   };
 }
 
-const activitySummary = buildSummary(activityIndex);
+let activitySummary = buildSummary(activityIndex);
 
 const app = express();
 
@@ -224,7 +224,37 @@ function loadHeatmapData() {
   return { allPoints, byType };
 }
 
-const heatmapData = loadHeatmapData();
+let heatmapData = loadHeatmapData();
+
+// watch data files for changes and reload
+function reloadData() {
+  try {
+    if (fs.existsSync(INDEX_FILE)) {
+      activityIndex = loadIndex();
+      activityTypes = [...new Set(activityIndex.map((a) => a.type))]
+        .filter(Boolean)
+        .sort();
+      activitySummary = buildSummary(activityIndex);
+    }
+    if (fs.existsSync(HEATMAP_FILE)) {
+      heatmapData = loadHeatmapData();
+    }
+  } catch (err) {
+    console.error("Failed to reload data:", err.message);
+  }
+}
+
+let reloadTimer = null;
+function scheduleReload() {
+  if (reloadTimer) clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(reloadData, 500);
+}
+
+for (const file of [INDEX_FILE, HEATMAP_FILE]) {
+  if (fs.existsSync(file)) {
+    fs.watch(file, () => scheduleReload());
+  }
+}
 
 // API: heatmap data (downsampled trackpoints from all activities)
 app.get("/api/heatmap", (req, res) => {
