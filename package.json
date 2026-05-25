@@ -12,10 +12,10 @@
     "screenshots": "node scripts/screenshots.js",
     "release": "npx np --no-publish --no-tests"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["garmin", "heatmap", "gpx", "tcx"],
+  "author": "Philipp Fromme",
   "license": "MIT",
-  "description": "",
+  "description": "A self-hosted viewer for TCX and GPX files with a heatmap of all activities.",
   "dependencies": {
     "@fontsource/mozilla-headline": "^5.2.2",
     "@fontsource/mozilla-text": "^5.2.2",
