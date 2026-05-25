@@ -109,14 +109,15 @@ async function captureApiHeaders(page) {
   });
 }
 
-async function fetchActivities(page, apiHeaders) {
-  console.log("Fetching activities...");
+async function fetchActivities(page, apiHeaders, { max } = {}) {
+  console.log(max ? `Fetching up to ${max} activities...` : "Fetching activities...");
 
   const activities = [];
   let start = 0;
 
   while (true) {
-    const url = `${GARMIN_CONNECT_BASE}${ACTIVITIES_API}?start=${start}&limit=${PAGE_SIZE}`;
+    const limit = max ? Math.min(PAGE_SIZE, max - activities.length) : PAGE_SIZE;
+    const url = `${GARMIN_CONNECT_BASE}${ACTIVITIES_API}?start=${start}&limit=${limit}`;
 
     const result = await page.evaluate(
       async ({ fetchUrl, headers }) => {
@@ -149,6 +150,11 @@ async function fetchActivities(page, apiHeaders) {
 
     activities.push(...batch);
     console.log(`  Fetched ${activities.length} activities so far...`);
+
+    if (max && activities.length >= max) {
+      break;
+    }
+
     start += PAGE_SIZE;
   }
 
@@ -297,6 +303,8 @@ const BROWSER_DATA_DIR = path.resolve(process.env.BROWSER_DATA_DIR || ".browser-
 
 async function main() {
   const headed = process.argv.includes("--headed");
+  const maxIndex = process.argv.indexOf("--max");
+  const max = maxIndex !== -1 ? parseInt(process.argv[maxIndex + 1], 10) : undefined;
 
   let email = process.env.GARMIN_EMAIL;
   let password = process.env.GARMIN_PASSWORD;
@@ -360,7 +368,7 @@ async function main() {
 
     console.log("Captured API auth headers.");
 
-    const activities = await fetchActivities(page, apiHeaders);
+    const activities = await fetchActivities(page, apiHeaders, { max });
 
     if (activities.length === 0) {
       console.log("No activities found.");

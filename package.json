@@ -8,6 +8,7 @@
     "sync": "node scripts/sync-daemon.js",
     "fetch": "node scripts/fetch-garmin.js",
     "fetch:headed": "node scripts/fetch-garmin.js --headed",
+    "fetch:test": "node scripts/fetch-garmin.js --max 10",
     "build:index": "node scripts/build-index.js",
     "screenshots": "node scripts/screenshots.js",
     "release": "npx np --no-publish --no-tests"
