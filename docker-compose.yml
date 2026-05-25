@@ -1,6 +1,8 @@
 services:
   viewer:
-    image: ghcr.io/philippfromme/traverse:latest
+    build:
+      context: .
+      dockerfile: docker/viewer.Dockerfile
     container_name: traverse-viewer
     restart: unless-stopped
     ports:
