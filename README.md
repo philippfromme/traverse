@@ -20,7 +20,7 @@ Create a `.env` file (see `.env.example`) with your Garmin credentials if using 
 ### Fetch activities from Garmin
 
 ```
-npm run fetch-garmin
+npm run fetch
 ```
 
 Opens a browser to log in to Garmin Connect and downloads:
@@ -28,12 +28,12 @@ Opens a browser to log in to Garmin Connect and downloads:
 - GPX files to `gpx/` (track geometry and activity basics)
 - TCX files to `tcx/` (detailed metrics like HR/duration/calories when available)
 
-Use `npm run fetch-garmin:headed` to run with a visible browser.
+Use `npm run fetch:headed` to run with a visible browser.
 
 ### Build the index
 
 ```
-npm run build-index
+npm run build:index
 ```
 
 Builds generated artifacts:
@@ -89,7 +89,7 @@ The server builds `activity-index.json` and `heatmap-data.json` automatically on
 ### Build locally
 
 ```
-docker build -t traverse .
+docker build -t traverse -f docker/viewer.Dockerfile .
 docker run -d -p 3000:3000 -v /path/to/data:/app/data traverse
 ```
 
@@ -106,6 +106,7 @@ Uses [np](https://github.com/sindresorhus/np) to bump the version, create a git 
 ```
 scripts/          Utility scripts
   fetch-garmin.js   Fetch Garmin metadata plus GPX/TCX exports
+  sync-daemon.js    Scheduling loop (runs fetch + build on interval)
   build-index.js    Build index + heatmap from GPX with TCX enrichment
 viewer/           Web viewer
   server.js         Express server and API

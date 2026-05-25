@@ -1,18 +1,18 @@
 services:
-  traverse:
+  viewer:
     image: ghcr.io/philippfromme/traverse:latest
-    container_name: traverse
+    container_name: traverse-viewer
     restart: unless-stopped
     ports:
       - 3004:3000
     volumes:
       - ./data:/app/data
 
-  fetcher:
+  sync:
     build:
       context: .
-      dockerfile: Dockerfile.fetcher
-    container_name: traverse-fetcher
+      dockerfile: docker/sync.Dockerfile
+    container_name: traverse-sync
     restart: unless-stopped
     environment:
       - GARMIN_EMAIL=${GARMIN_EMAIL}

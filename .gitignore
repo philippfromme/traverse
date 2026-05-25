@@ -3,6 +3,5 @@ node_modules/
 gpx/
 tcx/
 activity-index.json
-activity-data.json
 heatmap-data.json
 .browser-data/

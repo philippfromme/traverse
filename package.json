@@ -5,10 +5,10 @@
   "main": "viewer/server.js",
   "scripts": {
     "start": "node viewer/server.js",
-    "fetcher": "node scripts/fetcher.js",
-    "fetch-garmin": "node scripts/fetch-garmin.js",
-    "fetch-garmin:headed": "node scripts/fetch-garmin.js --headed",
-    "build-index": "node scripts/build-index.js",
+    "sync": "node scripts/sync-daemon.js",
+    "fetch": "node scripts/fetch-garmin.js",
+    "fetch:headed": "node scripts/fetch-garmin.js --headed",
+    "build:index": "node scripts/build-index.js",
     "screenshots": "node scripts/screenshots.js",
     "release": "npx np --no-publish --no-tests"
   },

@@ -17,4 +17,4 @@ ENV FETCH_INTERVAL=21600
 
 RUN mkdir -p /app/data/gpx /app/data/tcx /app/.browser-data
 
-CMD ["npm", "run", "fetcher"]
+CMD ["npm", "run", "sync"]
