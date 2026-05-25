@@ -17,8 +17,9 @@ const PAGE_SIZE = 20;
 const DOWNLOAD_DELAY_MS = 1500;
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 5000;
-const GPX_DIR = path.resolve("gpx");
-const TCX_DIR = path.resolve("tcx");
+const DATA_DIR = path.resolve(process.env.DATA_DIR || ".");
+const GPX_DIR = path.join(DATA_DIR, "gpx");
+const TCX_DIR = path.join(DATA_DIR, "tcx");
 
 async function prompt(question) {
   const rl = readline.createInterface({
@@ -292,7 +293,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const BROWSER_DATA_DIR = path.resolve(".browser-data");
+const BROWSER_DATA_DIR = path.resolve(process.env.BROWSER_DATA_DIR || ".browser-data");
 
 async function main() {
   const headed = process.argv.includes("--headed");
@@ -303,14 +304,20 @@ async function main() {
   // use a persistent browser context to:
   // 1. bypass bot detection (looks like a real browser)
   // 2. preserve cookies between runs (no re-login needed)
-  const context = await chromium.launchPersistentContext(BROWSER_DATA_DIR, {
+  const launchOptions = {
     headless: !headed,
-    channel: "chrome",
     args: ["--disable-blink-features=AutomationControlled"],
     viewport: { width: 1280, height: 720 },
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-  });
+  };
+
+  // use system Chrome when available (local dev), bundled Chromium in Docker
+  if (!process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
+    launchOptions.channel = "chrome";
+  }
+
+  const context = await chromium.launchPersistentContext(BROWSER_DATA_DIR, launchOptions);
 
   const page = context.pages()[0] || (await context.newPage());
 

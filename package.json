@@ -4,11 +4,11 @@
   "type": "module",
   "main": "viewer/server.js",
   "scripts": {
-    "all": "npm run fetch-garmin && npm run build-index && npm start",
-    "build-index": "node scripts/build-index.js",
+    "start": "node viewer/server.js",
+    "fetcher": "node scripts/fetcher.js",
     "fetch-garmin": "node scripts/fetch-garmin.js",
     "fetch-garmin:headed": "node scripts/fetch-garmin.js --headed",
-    "start": "node viewer/server.js",
+    "build-index": "node scripts/build-index.js",
     "screenshots": "node scripts/screenshots.js",
     "release": "npx np --no-publish --no-tests"
   },

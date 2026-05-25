@@ -1,0 +1,23 @@
+services:
+  traverse:
+    image: ghcr.io/philippfromme/traverse:latest
+    container_name: traverse
+    restart: unless-stopped
+    ports:
+      - 3004:3000
+    volumes:
+      - ./data:/app/data
+
+  fetcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.fetcher
+    container_name: traverse-fetcher
+    restart: unless-stopped
+    environment:
+      - GARMIN_EMAIL=${GARMIN_EMAIL}
+      - GARMIN_PASSWORD=${GARMIN_PASSWORD}
+      - FETCH_INTERVAL=21600
+    volumes:
+      - ./data:/app/data
+      - ./browser-data:/app/.browser-data

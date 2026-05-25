@@ -13,4 +13,4 @@ RUN mkdir -p /app/data/gpx /app/data/tcx
 
 EXPOSE 3000
 
-CMD ["node", "viewer/server.js"]
+CMD ["npm", "start"]
