@@ -287,10 +287,12 @@ async function main() {
   const activities = unchangedFiles.map((f) => existingIndex[path.basename(f, ".gpx")]);
 
   // only rebuild heatmap if there are new activities or heatmap file doesn't exist
-  const needsHeatmapRebuild = newFiles.length > 0 || !fs.existsSync(HEATMAP_FILE);
+  const heatmapExists = fs.existsSync(HEATMAP_FILE);
+  const needsHeatmapRebuild = !heatmapExists;
+  const needsHeatmapAppend = heatmapExists && newFiles.length > 0;
 
   if (needsHeatmapRebuild) {
-    console.log(`Building heatmap data...`);
+    console.log(`Building heatmap data from scratch...`);
     const heatmapByType = {};
     let totalPoints = 0;
 
@@ -301,73 +303,64 @@ async function main() {
 
       const file = gpxFiles[i];
       const gpxPath = path.join(GPX_DIR, file);
-      const isNew = !existingIds.has(path.basename(file, ".gpx"));
 
       try {
         const gpxData = parseGpxFile(gpxPath);
-        if (!gpxData) continue;
+        if (!gpxData || gpxData.trackpoints.length === 0) continue;
 
-        // collect heatmap points
-        if (gpxData.trackpoints.length > 0) {
-          const type = gpxData.type || "unknown";
-          if (!heatmapByType[type]) heatmapByType[type] = [];
+        const type = gpxData.type || "unknown";
+        if (!heatmapByType[type]) heatmapByType[type] = [];
 
-          const step = Math.max(1, Math.floor(gpxData.trackpoints.length / 100));
-          for (let j = 0; j < gpxData.trackpoints.length; j += step) {
-            const pt = gpxData.trackpoints[j];
-            heatmapByType[type].push([pt.lon, pt.lat]);
-            totalPoints++;
-          }
+        const step = Math.max(1, Math.floor(gpxData.trackpoints.length / 100));
+        for (let j = 0; j < gpxData.trackpoints.length; j += step) {
+          const pt = gpxData.trackpoints[j];
+          heatmapByType[type].push([pt.lon, pt.lat]);
+          totalPoints++;
         }
-
-        // only build index entry for new activities
-        if (isNew) {
-          const activityId = path.basename(file, ".gpx");
-
-          let tcxData = null;
-          if (tcxFiles.has(activityId)) {
-            try {
-              tcxData = parseTcxFile(path.join(TCX_DIR, `${activityId}.tcx`));
-            } catch (err) {
-              console.warn(`  Failed to parse TCX for ${activityId}: ${err.message}`);
-            }
-          }
-
-          const distance = gpxData.hasTrack ? computeDistance(gpxData.trackpoints) : (tcxData?.distance ?? 0);
-          const gpxDuration = gpxData.hasTrack ? computeDuration(gpxData.trackpoints) : null;
-          const maxSpeed = gpxData.hasTrack ? computeMaxSpeed(gpxData.trackpoints) : null;
-
-          activities.push({
-            id: activityId,
-            name: gpxData.name,
-            type: gpxData.type,
-            time: gpxData.time,
-            hasTrack: gpxData.hasTrack || (tcxData?.hasTrack ?? false),
-            trackpointCount: gpxData.trackpointCount,
-            distance,
-            duration: tcxData?.duration ?? gpxDuration,
-            maxSpeed,
-            averageHR: tcxData?.averageHR ?? null,
-            maxHR: tcxData?.maxHR ?? null,
-            calories: tcxData?.calories ?? null,
-            startLat: gpxData.startLat ?? tcxData?.startLat ?? null,
-            startLon: gpxData.startLon ?? tcxData?.startLon ?? null,
-            location: null,
-          });
-        }
-    } catch (err) {
-      console.warn(`  Failed to parse ${file}: ${err.message}`);
+      } catch (err) {
+        console.warn(`  Failed to parse ${file}: ${err.message}`);
+      }
     }
-  }
 
     console.log(`  Heatmap: ${totalPoints} points across ${Object.keys(heatmapByType).length} types.`);
     fs.writeFileSync(HEATMAP_FILE, JSON.stringify(heatmapByType));
-  } else if (newFiles.length > 0) {
-    // only new files to process (heatmap already exists) — parse just the new ones
-    console.log(`Parsing ${newFiles.length} new GPX files...`);
+  } else if (needsHeatmapAppend) {
+    console.log(`Appending ${newFiles.length} new activities to heatmap...`);
+    const heatmapByType = JSON.parse(fs.readFileSync(HEATMAP_FILE, "utf-8"));
+    let newPoints = 0;
 
-    for (let i = 0; i < newFiles.length; i++) {
-      const file = newFiles[i];
+    for (const file of newFiles) {
+      const gpxPath = path.join(GPX_DIR, file);
+
+      try {
+        const gpxData = parseGpxFile(gpxPath);
+        if (!gpxData || gpxData.trackpoints.length === 0) continue;
+
+        const type = gpxData.type || "unknown";
+        if (!heatmapByType[type]) heatmapByType[type] = [];
+
+        const step = Math.max(1, Math.floor(gpxData.trackpoints.length / 100));
+        for (let j = 0; j < gpxData.trackpoints.length; j += step) {
+          const pt = gpxData.trackpoints[j];
+          heatmapByType[type].push([pt.lon, pt.lat]);
+          newPoints++;
+        }
+      } catch (err) {
+        console.warn(`  Failed to parse ${file}: ${err.message}`);
+      }
+    }
+
+    console.log(`  Appended ${newPoints} new heatmap points.`);
+    fs.writeFileSync(HEATMAP_FILE, JSON.stringify(heatmapByType));
+  } else {
+    console.log(`Heatmap up to date.`);
+  }
+
+  // process new activities for index
+  if (newFiles.length > 0) {
+    console.log(`Parsing ${newFiles.length} new GPX files for index...`);
+
+    for (const file of newFiles) {
       const activityId = path.basename(file, ".gpx");
       const gpxPath = path.join(GPX_DIR, file);
 
