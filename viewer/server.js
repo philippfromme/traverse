@@ -9,8 +9,9 @@ import FitParser from "fit-file-parser";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || "./data");
-const GPX_DIR = path.join(DATA_DIR, "gpx");
 const FIT_DIR = path.join(DATA_DIR, "fit");
+const GPX_DIR = path.join(DATA_DIR, "gpx");
+const TCX_DIR = path.join(DATA_DIR, "tcx");
 const PUBLIC_DIR = path.join(__dirname, "public");
 const INDEX_FILE = path.join(DATA_DIR, "activity-index.json");
 const HEATMAP_FILE = path.join(DATA_DIR, "heatmap-data.json");
@@ -22,9 +23,9 @@ const parser = new XMLParser({
 });
 const fitParser = new FitParser({ force: true, mode: "cascade" });
 
-function parseFitFileForServer(filePath) {
+async function parseFitFileForServer(filePath) {
+  const buf = await fs.promises.readFile(filePath);
   return new Promise((resolve, reject) => {
-    const buf = fs.readFileSync(filePath);
     fitParser.parse(buf, (err, data) => {
       if (err) return reject(new Error(String(err)));
       const session = data?.activity?.sessions?.[0];
@@ -64,17 +65,19 @@ function parseGpxFile(filePath) {
   if (!gpx) return null;
 
   const metadata = gpx.metadata || {};
-  const trk = gpx.trk || {};
+  const rawTrk = gpx.trk || {};
+  const trk = Array.isArray(rawTrk) ? rawTrk[0] : rawTrk;
   const name = trk.name || "Unnamed";
   const type = trk.type || "unknown";
   const time = metadata.time || null;
 
-  // extract trackpoints
-  const trkseg = trk.trkseg || {};
-  let trkpts = trkseg.trkpt || [];
-
-  if (!Array.isArray(trkpts)) {
-    trkpts = trkpts ? [trkpts] : [];
+  // extract trackpoints (merge all segments across all tracks)
+  const allTrks = Array.isArray(rawTrk) ? rawTrk : [rawTrk];
+  let trkpts = [];
+  for (const t of allTrks) {
+    const trkseg = t.trkseg || {};
+    const pts = trkseg.trkpt || [];
+    trkpts = trkpts.concat(Array.isArray(pts) ? pts : pts ? [pts] : []);
   }
 
   const trackpoints = trkpts.map((pt) => {
@@ -122,16 +125,13 @@ function loadIndex() {
   return activities;
 }
 
-function reloadInMemoryIndex() {
-  activityIndex = loadIndex();
-  activityTypes = [...new Set(activityIndex.map((a) => a.type))]
-    .filter(Boolean)
-    .sort();
-  activitySummary = buildSummary(activityIndex);
-}
-
-if (!fs.existsSync(INDEX_FILE)) {
-  await buildIndex();
+if (!fs.existsSync(INDEX_FILE) || !fs.existsSync(HEATMAP_FILE)) {
+  try {
+    await buildIndex();
+  } catch (err) {
+    console.error("Failed to build index on startup:", err.message);
+    process.exit(1);
+  }
 }
 
 let activityIndex = loadIndex();
@@ -219,6 +219,7 @@ app.get("/api/activities", (req, res) => {
 // API: single activity with full trackpoints
 app.get("/api/activities/:id", async (req, res) => {
   const activityId = req.params.id;
+  if (!/^[\w-]+$/.test(activityId)) return res.status(400).json({ error: "Invalid id" });
   const gpxPath = path.join(GPX_DIR, `${activityId}.gpx`);
   const fitPath = path.join(FIT_DIR, `${activityId}.fit`);
 
@@ -255,6 +256,7 @@ app.get("/api/activities/:id", async (req, res) => {
 // API: lightweight track coords only (for feed map previews)
 app.get("/api/activities/:id/track", async (req, res) => {
   const activityId = req.params.id;
+  if (!/^[\w-]+$/.test(activityId)) return res.status(400).json({ error: "Invalid id" });
   const gpxPath = path.join(GPX_DIR, `${activityId}.gpx`);
   const fitPath = path.join(FIT_DIR, `${activityId}.fit`);
 
@@ -289,11 +291,6 @@ app.get("/api/activities/:id/track", async (req, res) => {
 
 // Load pre-computed heatmap data
 function loadHeatmapData() {
-  if (!fs.existsSync(HEATMAP_FILE)) {
-    console.log("Heatmap data not found, building index...");
-    buildIndex();
-  }
-
   const byType = JSON.parse(fs.readFileSync(HEATMAP_FILE, "utf-8"));
   const allPoints = [];
   for (const points of Object.values(byType)) {
@@ -407,7 +404,7 @@ function scheduleRebuild() {
     rebuilding = true;
     try {
       await buildIndex();
-      reloadInMemoryIndex();
+      reloadData();
       console.log("Index reloaded.");
     } catch (err) {
       console.error("Index rebuild failed:", err.message);
@@ -417,7 +414,7 @@ function scheduleRebuild() {
   }, 2000);
 }
 
-for (const dir of [FIT_DIR, GPX_DIR]) {
+for (const dir of [FIT_DIR, GPX_DIR, TCX_DIR]) {
   if (fs.existsSync(dir)) {
     fs.watch(dir, (eventType) => {
       if (eventType === "rename") scheduleRebuild();
