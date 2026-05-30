@@ -71,6 +71,8 @@ Your data directory should contain:
 
 The server builds `activity-index.json` and `heatmap-data.json` automatically on first start if they don't exist. On subsequent starts, only new activities are processed.
 
+Drop new FIT or GPX files into the mounted `fit/`, `gpx/`, or `tcx/` directories and the index rebuilds automatically within a few seconds — no restart needed.
+
 ### Build locally
 
 ```

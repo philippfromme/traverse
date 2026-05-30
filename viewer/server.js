@@ -1,4 +1,4 @@
-import { execFileSync } from "child_process";
+import { execFile } from "child_process";
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -100,21 +100,38 @@ function parseGpxFile(filePath) {
 }
 
 function buildIndex() {
-  console.log("Index not found, building...");
-  execFileSync(process.execPath, [path.resolve("scripts/build-index.js")], {
-    stdio: "inherit",
-    env: { ...process.env, DATA_DIR: DATA_DIR },
+  return new Promise((resolve, reject) => {
+    console.log("Building index...");
+    execFile(
+      process.execPath,
+      [path.resolve("scripts/build-index.js")],
+      { env: { ...process.env, DATA_DIR: DATA_DIR } },
+      (err, stdout, stderr) => {
+        if (stdout) process.stdout.write(stdout);
+        if (stderr) process.stderr.write(stderr);
+        if (err) return reject(err);
+        resolve();
+      }
+    );
   });
 }
 
 function loadIndex() {
-  if (!fs.existsSync(INDEX_FILE)) {
-    buildIndex();
-  }
-
   const activities = JSON.parse(fs.readFileSync(INDEX_FILE, "utf-8"));
   console.log(`Loaded ${activities.length} activities from index.`);
   return activities;
+}
+
+function reloadInMemoryIndex() {
+  activityIndex = loadIndex();
+  activityTypes = [...new Set(activityIndex.map((a) => a.type))]
+    .filter(Boolean)
+    .sort();
+  activitySummary = buildSummary(activityIndex);
+}
+
+if (!fs.existsSync(INDEX_FILE)) {
+  await buildIndex();
 }
 
 let activityIndex = loadIndex();
@@ -378,6 +395,35 @@ server.on("error", (err) => {
   console.error("Server error:", err.message);
   process.exit(1);
 });
+
+// Watch data directories and rebuild index when new files are dropped
+let rebuildTimer = null;
+let rebuilding = false;
+
+function scheduleRebuild() {
+  if (rebuildTimer) clearTimeout(rebuildTimer);
+  rebuildTimer = setTimeout(async () => {
+    if (rebuilding) return;
+    rebuilding = true;
+    try {
+      await buildIndex();
+      reloadInMemoryIndex();
+      console.log("Index reloaded.");
+    } catch (err) {
+      console.error("Index rebuild failed:", err.message);
+    } finally {
+      rebuilding = false;
+    }
+  }, 2000);
+}
+
+for (const dir of [FIT_DIR, GPX_DIR]) {
+  if (fs.existsSync(dir)) {
+    fs.watch(dir, (eventType) => {
+      if (eventType === "rename") scheduleRebuild();
+    });
+  }
+}
 
 process.on("SIGINT", () => {
   console.log("\nShutting down...");
