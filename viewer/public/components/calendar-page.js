@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 
 import { formatType, formatDistance, formatDuration } from "./utils.js";
+import "./custom-select.js";
 
 const MONTH_NAMES = [
   "January",
@@ -93,6 +94,21 @@ class CalendarPage extends LitElement {
     this._year = now.getFullYear();
     this._month = now.getMonth();
     this._updateURL();
+  }
+
+  _onYearChange(e) {
+    this._year = parseInt(e.target.value, 10);
+    this._updateURL();
+  }
+
+  _getAvailableYears() {
+    const years = new Set();
+    for (const a of this._activities) {
+      if (!a.time) continue;
+      years.add(new Date(a.time).getFullYear());
+    }
+    years.add(new Date().getFullYear());
+    return Array.from(years).sort((a, b) => a - b);
   }
 
   _getActivitiesByDate() {
@@ -191,9 +207,14 @@ class CalendarPage extends LitElement {
         <button class="page-btn" @click=${this._prevMonth}>
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
-        <span class="calendar-title"
-          >${MONTH_NAMES[this._month]} ${this._year}</span
-        >
+        <span class="calendar-title">
+          ${MONTH_NAMES[this._month]}
+          <custom-select
+            .value=${String(this._year)}
+            .items=${this._getAvailableYears().map((y) => ({ value: String(y), label: String(y) }))}
+            @change=${this._onYearChange}
+          ></custom-select>
+        </span>
         <button class="page-btn" @click=${this._nextMonth}>
           <span class="material-symbols-outlined">arrow_forward</span>
         </button>
