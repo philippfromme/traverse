@@ -55,6 +55,9 @@ body {
   padding-top: 60px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
 }
 
 h1,
@@ -91,11 +94,13 @@ calendar-page {
   flex-direction: column;
   gap: 12px;
   padding: 12px;
+  flex: 1;
 }
 
 feed-page {
   display: block;
   padding: 12px;
+  flex: 1;
 }
 
 /* ─── HEADER ─── */
@@ -332,9 +337,10 @@ feed-page {
 }
 
 .detail-meta span {
-  white-space: nowrap;
   background: var(--bg-elevated);
   padding: 6px 14px;
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 /* ─── MAP ─── */
@@ -746,6 +752,55 @@ feed-page {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--fg-dim);
+}
+
+.calendar-dots {
+  display: none;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.calendar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.calendar-cell.selected {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.calendar-day-detail {
+  display: none;
+  border-top: 1px solid var(--border);
+  padding: 16px 20px;
+}
+
+.calendar-day-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+
+.calendar-day-detail-close {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.calendar-day-detail-close:hover {
+  color: var(--fg);
 }
 
 /* ─── COORDS ─── */
@@ -1208,6 +1263,16 @@ feed-page {
     flex-direction: column;
   }
 
+  .filters input,
+  .filters select,
+  .filters custom-select {
+    width: 100%;
+  }
+
+  .filters custom-select .custom-select-trigger {
+    width: 100%;
+  }
+
   .detail-header h2 {
     font-size: 1.8rem;
   }
@@ -1261,6 +1326,45 @@ feed-page {
 
   .feed-card-map {
     height: 200px;
+  }
+}
+
+@media (max-width: 600px) {
+  .calendar-nav {
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .calendar-title {
+    font-size: 1rem;
+    min-width: 0;
+  }
+
+  .calendar-cell {
+    min-height: 52px;
+    padding: 4px 3px;
+    cursor: pointer;
+  }
+
+  .calendar-cell.outside {
+    cursor: default;
+  }
+
+  .calendar-date {
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+
+  .calendar-grid .calendar-activity {
+    display: none;
+  }
+
+  .calendar-dots {
+    display: flex;
+  }
+
+  .calendar-day-detail {
+    display: block;
   }
 }
 

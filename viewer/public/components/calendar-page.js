@@ -25,6 +25,7 @@ class CalendarPage extends LitElement {
     _activities: { state: true },
     _year: { state: true },
     _month: { state: true },
+    _selectedDay: { state: true },
   };
 
   createRenderRoot() {
@@ -37,6 +38,7 @@ class CalendarPage extends LitElement {
     const now = new Date();
     this._year = now.getFullYear();
     this._month = now.getMonth();
+    this._selectedDay = null;
   }
 
   connectedCallback() {
@@ -76,6 +78,7 @@ class CalendarPage extends LitElement {
     } else {
       this._month--;
     }
+    this._selectedDay = null;
     this._updateURL();
   }
 
@@ -86,6 +89,7 @@ class CalendarPage extends LitElement {
     } else {
       this._month++;
     }
+    this._selectedDay = null;
     this._updateURL();
   }
 
@@ -93,12 +97,20 @@ class CalendarPage extends LitElement {
     const now = new Date();
     this._year = now.getFullYear();
     this._month = now.getMonth();
+    this._selectedDay = null;
     this._updateURL();
   }
 
   _onYearChange(e) {
     this._year = parseInt(e.target.value, 10);
+    this._selectedDay = null;
     this._updateURL();
+  }
+
+  _selectDay(e, key, hasActivities) {
+    if (e.target.closest("a")) return;
+    if (!hasActivities) return;
+    this._selectedDay = this._selectedDay === key ? null : key;
   }
 
   _getAvailableYears() {
@@ -236,7 +248,8 @@ class CalendarPage extends LitElement {
             <div
               class="calendar-cell ${d.outside ? "outside" : ""} ${isToday(d)
                 ? "today"
-                : ""}"
+                : ""} ${this._selectedDay === key ? "selected" : ""}"
+              @click=${(e) => this._selectDay(e, key, activities.length > 0)}
             >
               <div class="calendar-date">${d.date}</div>
               ${activities.map(
@@ -258,6 +271,13 @@ class CalendarPage extends LitElement {
                   </a>
                 `,
               )}
+              ${activities.length > 0
+                ? html`<div class="calendar-dots">
+                    ${activities.map(
+                      () => html`<span class="calendar-dot"></span>`,
+                    )}
+                  </div>`
+                : nothing}
             </div>
           `;
 
@@ -293,6 +313,49 @@ class CalendarPage extends LitElement {
           `;
         })}
       </div>
+
+      ${this._selectedDay
+        ? (() => {
+            const [selYear, selMonth, selDate] = this._selectedDay
+              .split("-")
+              .map(Number);
+            const selActivities = byDate.get(this._selectedDay) || [];
+            return html`
+              <div class="calendar-day-detail">
+                <div class="calendar-day-detail-header">
+                  <span>${selDate} ${MONTH_NAMES[selMonth]}</span>
+                  <button
+                    class="calendar-day-detail-close"
+                    @click=${() => {
+                      this._selectedDay = null;
+                    }}
+                  >
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                ${selActivities.map(
+                  (a) => html`
+                    <a
+                      href="/activity/${a.id}"
+                      class="calendar-activity"
+                      data-type="${a.type}"
+                    >
+                      <span class="calendar-activity-type"
+                        >${formatType(a.type)}</span
+                      >
+                      <span class="calendar-activity-name">${a.name}</span>
+                      ${a.distance > 0
+                        ? html`<span class="calendar-activity-dist"
+                            >${formatDistance(a.distance)}</span
+                          >`
+                        : nothing}
+                    </a>
+                  `,
+                )}
+              </div>
+            `;
+          })()
+        : nothing}
     `;
   }
 }
