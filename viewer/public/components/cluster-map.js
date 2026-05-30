@@ -106,7 +106,7 @@ class ClusterMap extends HTMLElement {
         filter: ["has", "point_count"],
         layout: {
           "text-field": "{point_count_abbreviated}",
-          "text-font": ["Mozilla Text"],
+          "text-font": ["Geist"],
           "text-size": 12,
         },
         paint: {

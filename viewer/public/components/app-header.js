@@ -27,10 +27,7 @@ class AppHeader extends LitElement {
     return html`
       <div class="site-header">
         <h1>
-          <a href="/">
-            <span class="material-symbols-outlined header-logo">swap_horiz</span
-            >Traverse
-          </a>
+          <a href="/">Traverse</a>
         </h1>
         <button
           class="header-hamburger"

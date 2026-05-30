@@ -1,29 +1,32 @@
 {
   "name": "traverse",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "main": "viewer/server.js",
   "scripts": {
     "start": "node viewer/server.js",
-    "sync": "node scripts/sync-daemon.js",
-    "fetch": "node scripts/fetch-garmin.js",
-    "fetch:headed": "node scripts/fetch-garmin.js --headed",
-    "fetch:test": "node scripts/fetch-garmin.js --max 10",
     "build:index": "node scripts/build-index.js",
     "screenshots": "node scripts/screenshots.js",
     "release": "npx np --no-publish --no-tests"
   },
-  "keywords": ["garmin", "heatmap", "gpx", "tcx"],
+  "keywords": [
+    "heatmap",
+    "gpx",
+    "tcx",
+    "viewer"
+  ],
   "author": "Philipp Fromme",
   "license": "MIT",
   "description": "A self-hosted viewer for TCX and GPX files with a heatmap of all activities.",
   "dependencies": {
-    "@fontsource/mozilla-headline": "^5.2.2",
-    "@fontsource/mozilla-text": "^5.2.2",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.5.9",
-    "material-symbols": "^0.44.4",
+    "fit-file-parser": "^3.0.1",
+    "geist": "^1.7.1",
+    "material-symbols": "^0.44.4"
+  },
+  "devDependencies": {
     "open": "^11.0.0",
     "playwright": "^1.58.2"
   }

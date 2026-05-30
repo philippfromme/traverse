@@ -67,7 +67,7 @@ class AreaChart extends HTMLElement {
     const gridLines = 4;
     ctx.strokeStyle = "#23232a";
     ctx.lineWidth = 1;
-    ctx.font = "11px 'Mozilla Text', system-ui, sans-serif";
+    ctx.font = "11px 'Geist', system-ui, sans-serif";
     ctx.fillStyle = "#9a9aa3";
     ctx.textAlign = "right";
 
@@ -124,7 +124,7 @@ class AreaChart extends HTMLElement {
 
     // x-axis labels
     ctx.fillStyle = "#9a9aa3";
-    ctx.font = "11px 'Mozilla Text', system-ui, sans-serif";
+    ctx.font = "11px 'Geist', system-ui, sans-serif";
     ctx.textAlign = "center";
     const labelEvery = Math.max(1, Math.ceil(labels.length / 12));
     for (let i = 0; i < labels.length; i += labelEvery) {

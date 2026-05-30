@@ -68,7 +68,7 @@ class ElevationChart extends HTMLElement {
     const gridLines = 4;
     ctx.strokeStyle = "#23232a";
     ctx.lineWidth = 1;
-    ctx.font = "11px 'Mozilla Text', system-ui, sans-serif";
+    ctx.font = "11px 'Geist', system-ui, sans-serif";
     ctx.fillStyle = "#9a9aa3";
     ctx.textAlign = "right";
 

@@ -4,11 +4,13 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { XMLParser } from "fast-xml-parser";
+import FitParser from "fit-file-parser";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const DATA_DIR = path.resolve(process.env.DATA_DIR || ".");
+const DATA_DIR = path.resolve(process.env.DATA_DIR || "./data");
 const GPX_DIR = path.join(DATA_DIR, "gpx");
+const FIT_DIR = path.join(DATA_DIR, "fit");
 const PUBLIC_DIR = path.join(__dirname, "public");
 const INDEX_FILE = path.join(DATA_DIR, "activity-index.json");
 const HEATMAP_FILE = path.join(DATA_DIR, "heatmap-data.json");
@@ -18,6 +20,41 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
 });
+const fitParser = new FitParser({ force: true, mode: "cascade" });
+
+function parseFitFileForServer(filePath) {
+  return new Promise((resolve, reject) => {
+    const buf = fs.readFileSync(filePath);
+    fitParser.parse(buf, (err, data) => {
+      if (err) return reject(new Error(String(err)));
+      const session = data?.activity?.sessions?.[0];
+      if (!session) return resolve(null);
+
+      const trackpoints = [];
+      for (const lap of session.laps || []) {
+        for (const rec of lap.records || []) {
+          if (rec.position_lat != null && rec.position_long != null) {
+            trackpoints.push({
+              lat: rec.position_lat,
+              lon: rec.position_long,
+              ele: rec.enhanced_altitude ?? null,
+              time: rec.timestamp ? new Date(rec.timestamp).toISOString() : null,
+              hr: rec.heart_rate ?? null,
+            });
+          }
+        }
+      }
+
+      resolve({
+        type: session.sport || "unknown",
+        time: session.start_time ? new Date(session.start_time).toISOString() : null,
+        hasTrack: trackpoints.length > 0,
+        trackpointCount: trackpoints.length,
+        trackpoints,
+      });
+    });
+  });
+}
 
 function parseGpxFile(filePath) {
   const xml = fs.readFileSync(filePath, "utf-8");
@@ -118,15 +155,15 @@ let activitySummary = buildSummary(activityIndex);
 const app = express();
 
 app.use(
-  "/fonts/mozilla-text",
+  "/fonts/geist-sans",
   express.static(
-    path.join(__dirname, "../node_modules/@fontsource/mozilla-text"),
+    path.join(__dirname, "../node_modules/geist/dist/fonts/geist-sans"),
   ),
 );
 app.use(
-  "/fonts/mozilla-headline",
+  "/fonts/geist-pixel",
   express.static(
-    path.join(__dirname, "../node_modules/@fontsource/mozilla-headline"),
+    path.join(__dirname, "../node_modules/geist/dist/fonts/geist-pixel"),
   ),
 );
 app.use(
@@ -163,49 +200,74 @@ app.get("/api/activities", (req, res) => {
 });
 
 // API: single activity with full trackpoints
-app.get("/api/activities/:id", (req, res) => {
+app.get("/api/activities/:id", async (req, res) => {
   const activityId = req.params.id;
-  const filePath = path.join(GPX_DIR, `${activityId}.gpx`);
+  const gpxPath = path.join(GPX_DIR, `${activityId}.gpx`);
+  const fitPath = path.join(FIT_DIR, `${activityId}.fit`);
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "Activity not found" });
-  }
+  const indexed = activityIndex.find((a) => a.id === activityId);
+  const location = indexed?.location || null;
+  const maxSpeed = indexed?.maxSpeed || null;
 
-  try {
-    const data = parseGpxFile(filePath);
-
-    // enrich with index metadata
-    const indexed = activityIndex.find((a) => a.id === activityId);
-    const location = indexed?.location || null;
-    const maxSpeed = indexed?.maxSpeed || null;
-
-    res.json({ id: activityId, location, maxSpeed, ...data });
-  } catch (err) {
-    res.status(500).json({ error: `Failed to parse GPX: ${err.message}` });
+  if (fs.existsSync(gpxPath)) {
+    try {
+      const data = parseGpxFile(gpxPath);
+      res.json({ id: activityId, location, maxSpeed, ...data });
+    } catch (err) {
+      res.status(500).json({ error: `Failed to parse GPX: ${err.message}` });
+    }
+  } else if (fs.existsSync(fitPath)) {
+    try {
+      const data = await parseFitFileForServer(fitPath);
+      if (!data) return res.status(404).json({ error: "Activity not found" });
+      res.json({
+        id: activityId,
+        location,
+        maxSpeed,
+        name: indexed?.name || data.type,
+        ...data,
+      });
+    } catch (err) {
+      res.status(500).json({ error: `Failed to parse FIT: ${err.message}` });
+    }
+  } else {
+    res.status(404).json({ error: "Activity not found" });
   }
 });
 
 // API: lightweight track coords only (for feed map previews)
-app.get("/api/activities/:id/track", (req, res) => {
+app.get("/api/activities/:id/track", async (req, res) => {
   const activityId = req.params.id;
-  const filePath = path.join(GPX_DIR, `${activityId}.gpx`);
+  const gpxPath = path.join(GPX_DIR, `${activityId}.gpx`);
+  const fitPath = path.join(FIT_DIR, `${activityId}.fit`);
 
-  if (!fs.existsSync(filePath)) {
+  let trackpoints = null;
+
+  if (fs.existsSync(gpxPath)) {
+    try {
+      const data = parseGpxFile(gpxPath);
+      trackpoints = data.trackpoints;
+    } catch (err) {
+      return res.status(500).json({ error: `Failed to parse GPX: ${err.message}` });
+    }
+  } else if (fs.existsSync(fitPath)) {
+    try {
+      const data = await parseFitFileForServer(fitPath);
+      trackpoints = data?.trackpoints ?? [];
+    } catch (err) {
+      return res.status(500).json({ error: `Failed to parse FIT: ${err.message}` });
+    }
+  } else {
     return res.status(404).json({ error: "Activity not found" });
   }
 
-  try {
-    const data = parseGpxFile(filePath);
-    // downsample to every Nth point for preview
-    const step = Math.max(1, Math.floor(data.trackpoints.length / 200));
-    const coords = data.trackpoints
-      .filter((_, i) => i % step === 0)
-      .map((pt) => [pt.lat, pt.lon]);
+  // downsample to every Nth point for preview
+  const step = Math.max(1, Math.floor(trackpoints.length / 200));
+  const coords = trackpoints
+    .filter((_, i) => i % step === 0)
+    .map((pt) => [pt.lat, pt.lon]);
 
-    res.json({ coords });
-  } catch (err) {
-    res.status(500).json({ error: `Failed to parse GPX: ${err.message}` });
-  }
+  res.json({ coords });
 });
 
 // Load pre-computed heatmap data
@@ -305,8 +367,10 @@ const server = app.listen(PORT, async () => {
   const url = `http://localhost:${PORT}`;
   console.log(`Viewer running at ${url}`);
 
-  const { default: open } = await import("open");
-  open(url);
+  try {
+    const { default: open } = await import("open");
+    open(url);
+  } catch {}
 });
 
 // keep the process alive

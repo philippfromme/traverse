@@ -9,8 +9,7 @@ class AppFooter extends LitElement {
     return html`
       <footer class="site-footer">
         <div class="footer-brand">
-          <span class="material-symbols-outlined footer-arrow">swap_horiz</span
-          ><span class="footer-text">Traverse</span>
+          <span class="footer-text">Traverse</span>
         </div>
         <div class="footer-links">
           <a

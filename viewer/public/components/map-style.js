@@ -163,7 +163,7 @@ export function getMapStyle({ contours = true, terrain = true } = {}) {
           "symbol-placement": "line",
           "text-size": 10,
           "text-field": ["concat", ["number-format", ["get", "ele"], {}], "m"],
-          "text-font": ["Mozilla Text"],
+          "text-font": ["Geist"],
         },
       },
     );
@@ -179,7 +179,7 @@ export function getMapStyle({ contours = true, terrain = true } = {}) {
       filter: ["==", "class", "city"],
       layout: {
         "text-field": "{name}",
-        "text-font": ["Mozilla Text"],
+        "text-font": ["Geist"],
         "text-size": ["interpolate", ["linear"], ["zoom"], 4, 12, 10, 18],
         "text-transform": "uppercase",
         "text-letter-spacing": 0.1,
@@ -199,7 +199,7 @@ export function getMapStyle({ contours = true, terrain = true } = {}) {
       filter: ["==", "class", "town"],
       layout: {
         "text-field": "{name}",
-        "text-font": ["Mozilla Text"],
+        "text-font": ["Geist"],
         "text-size": ["interpolate", ["linear"], ["zoom"], 8, 10, 14, 14],
       },
       paint: {
@@ -217,7 +217,7 @@ export function getMapStyle({ contours = true, terrain = true } = {}) {
       filter: ["in", "class", "village", "suburb", "neighbourhood"],
       layout: {
         "text-field": "{name}",
-        "text-font": ["Mozilla Text"],
+        "text-font": ["Geist"],
         "text-size": 11,
       },
       paint: {

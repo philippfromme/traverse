@@ -8,7 +8,7 @@ const BASE = `http://localhost:${PORT}`;
 const DOCS_DIR = path.resolve("docs");
 
 // find a recent activity with GPS track
-const activities = JSON.parse(fs.readFileSync("activity-index.json", "utf-8"));
+const activities = JSON.parse(fs.readFileSync("data/activity-index.json", "utf-8"));
 const activityWithTrack = activities
   .filter((a) => a.hasTrack && a.distance > 1000)
   .sort((a, b) => new Date(b.time) - new Date(a.time))[0];

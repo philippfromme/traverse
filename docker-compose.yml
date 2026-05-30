@@ -9,17 +9,3 @@ services:
       - 3004:3000
     volumes:
       - ./data:/app/data
-
-  sync:
-    build:
-      context: .
-      dockerfile: docker/sync.Dockerfile
-    container_name: traverse-sync
-    restart: unless-stopped
-    environment:
-      - GARMIN_EMAIL=${GARMIN_EMAIL}
-      - GARMIN_PASSWORD=${GARMIN_PASSWORD}
-      - FETCH_INTERVAL=21600
-    volumes:
-      - ./data:/app/data
-      - ./browser-data:/app/.browser-data
