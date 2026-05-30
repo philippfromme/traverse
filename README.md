@@ -1,6 +1,6 @@
 # Traverse
 
-Your Garmin activities in a self-hosted viewer. Fetches activity data from Garmin Connect, indexes it with reverse geocoding, and serves a fast, searchable UI with maps and stats.
+Self-hosted viewer for FIT/GPX/TCX activities.
 
 ![](docs/activities.png)
 ![](docs/activity.png)
@@ -13,22 +13,7 @@ Your Garmin activities in a self-hosted viewer. Fetches activity data from Garmi
 npm install
 ```
 
-Create a `.env` file (see `.env.example`) with your Garmin credentials if using auto-login.
-
 ## Usage
-
-### Fetch activities from Garmin
-
-```
-npm run fetch
-```
-
-Opens a browser to log in to Garmin Connect and downloads:
-
-- GPX files to `gpx/` (track geometry and activity basics)
-- TCX files to `tcx/` (detailed metrics like HR/duration/calories when available)
-
-Use `npm run fetch:headed` to run with a visible browser.
 
 ### Build the index
 
@@ -43,9 +28,8 @@ Builds generated artifacts:
 
 During indexing:
 
-- GPX is used for route/track points and heatmap generation.
-- Duration/HR/calories are taken from TCX when available.
-- GPX-derived timing is used as a fallback when TCX data is missing.
+- FIT, GPX, and TCX files are used for route/track points and heatmap generation.
+- Duration/HR/calories are taken from FIT, GPX, or TCX data.
 
 Activity locations are reverse geocoded via OpenStreetMap Nominatim. Results are cached, so only new activities get geocoded on subsequent runs.
 
@@ -78,8 +62,9 @@ Your data directory should contain:
 
 ```
 /data/traverse/
-  gpx/                  GPX files (your backup)
-  tcx/                  TCX files (your backup)
+  fit/                  FIT files
+  gpx/                  GPX files
+  tcx/                  TCX files
   activity-index.json   Generated on first start (persisted automatically)
   heatmap-data.json     Generated on first start (persisted automatically)
 ```
@@ -89,7 +74,7 @@ The server builds `activity-index.json` and `heatmap-data.json` automatically on
 ### Build locally
 
 ```
-docker build -t traverse -f docker/viewer.Dockerfile .
+docker build -t traverse -f docker/Dockerfile .
 docker run -d -p 3000:3000 -v /path/to/data:/app/data traverse
 ```
 
@@ -100,19 +85,3 @@ npm run release
 ```
 
 Uses [np](https://github.com/sindresorhus/np) to bump the version, create a git tag, and push. The GitHub Action then builds and publishes the Docker image to GHCR.
-
-## Project Structure
-
-```
-scripts/          Utility scripts
-  fetch-garmin.js   Fetch Garmin metadata plus GPX/TCX exports
-  sync-daemon.js    Scheduling loop (runs fetch + build on interval)
-  build-index.js    Build index + heatmap from GPX with TCX enrichment
-viewer/           Web viewer
-  server.js         Express server and API
-  public/           Frontend (HTML, CSS, JS)
-gpx/              GPX files (gitignored)
-tcx/              TCX files (gitignored)
-activity-index.json Generated activity index (gitignored)
-heatmap-data.json  Generated heatmap data (gitignored)
-```
