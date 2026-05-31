@@ -4,11 +4,12 @@ import { XMLParser } from "fast-xml-parser";
 import FitParser from "fit-file-parser";
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || "./data");
+const CACHE_DIR = path.resolve(process.env.CACHE_DIR || "./cache");
 const GPX_DIR = path.join(DATA_DIR, "gpx");
 const TCX_DIR = path.join(DATA_DIR, "tcx");
 const FIT_DIR = path.join(DATA_DIR, "fit");
-const INDEX_FILE = path.join(DATA_DIR, "activity-index.json");
-const HEATMAP_FILE = path.join(DATA_DIR, "heatmap-data.json");
+const INDEX_FILE = path.join(CACHE_DIR, "activity-index.json");
+const HEATMAP_FILE = path.join(CACHE_DIR, "heatmap-data.json");
 const NOMINATIM_DELAY_MS = 1500; // Nominatim requires max 1 req/s, use 1.5s for safety
 const FIT_MATCH_TOLERANCE_MS = 60 * 1000; // match FIT to GPX/TCX within ±60s
 

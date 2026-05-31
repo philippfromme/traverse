@@ -9,7 +9,8 @@ COPY viewer/ viewer/
 COPY scripts/build-index.js scripts/build-index.js
 
 ENV DATA_DIR=/app/data
-RUN mkdir -p /app/data/fit /app/data/gpx /app/data/tcx
+ENV CACHE_DIR=/app/cache
+RUN mkdir -p /app/data/fit /app/data/gpx /app/data/tcx /app/cache
 
 EXPOSE 3000
 

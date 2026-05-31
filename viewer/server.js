@@ -9,12 +9,13 @@ import FitParser from "fit-file-parser";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || "./data");
+const CACHE_DIR = path.resolve(process.env.CACHE_DIR || "./cache");
 const FIT_DIR = path.join(DATA_DIR, "fit");
 const GPX_DIR = path.join(DATA_DIR, "gpx");
 const TCX_DIR = path.join(DATA_DIR, "tcx");
 const PUBLIC_DIR = path.join(__dirname, "public");
-const INDEX_FILE = path.join(DATA_DIR, "activity-index.json");
-const HEATMAP_FILE = path.join(DATA_DIR, "heatmap-data.json");
+const INDEX_FILE = path.join(CACHE_DIR, "activity-index.json");
+const HEATMAP_FILE = path.join(CACHE_DIR, "heatmap-data.json");
 const PORT = 3000;
 
 const parser = new XMLParser({
