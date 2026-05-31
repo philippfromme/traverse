@@ -9,6 +9,7 @@ class AppFooter extends LitElement {
     return html`
       <footer class="site-footer">
         <div class="footer-brand">
+          <img class="footer-logo" src="/logo.svg" alt="" />
           <span class="footer-text">Traverse</span>
         </div>
         <div class="footer-links">

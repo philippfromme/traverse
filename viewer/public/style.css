@@ -136,7 +136,7 @@ feed-page {
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .site-header h1 a:hover {
@@ -144,9 +144,8 @@ feed-page {
 }
 
 .header-logo {
-  font-size: 23px;
-  vertical-align: middle;
-  transform: translate(0px, -1px);
+  height: 16px;
+  filter: invert(1);
 }
 
 .header-nav {
@@ -1180,6 +1179,10 @@ feed-page {
   font-size: 1.4rem;
   line-height: 1;
   color: var(--m24-white);
+}
+
+.footer-logo {
+  height: 16px;
 }
 
 .footer-arrow {

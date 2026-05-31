@@ -27,7 +27,7 @@ class AppHeader extends LitElement {
     return html`
       <div class="site-header">
         <h1>
-          <a href="/">Traverse</a>
+          <a href="/"><img class="header-logo" src="/logo.svg" alt="">Traverse</a>
         </h1>
         <button
           class="header-hamburger"
