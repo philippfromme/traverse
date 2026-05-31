@@ -353,7 +353,7 @@ function loadHeatmapData() {
   const byType = JSON.parse(fs.readFileSync(HEATMAP_FILE, "utf-8"));
   const allPoints = [];
   for (const points of Object.values(byType)) {
-    allPoints.push(...points);
+    for (const pt of points) allPoints.push(pt);
   }
   console.log(`Loaded ${allPoints.length} heatmap points.`);
   return { allPoints, byType };
