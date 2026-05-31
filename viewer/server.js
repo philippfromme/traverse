@@ -1,4 +1,5 @@
 import { execFile } from "child_process";
+import "dotenv/config";
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -17,6 +18,12 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const INDEX_FILE = path.join(CACHE_DIR, "activity-index.json");
 const HEATMAP_FILE = path.join(CACHE_DIR, "heatmap-data.json");
 const PORT = 3000;
+
+console.log(`[config] DATA_DIR=${DATA_DIR}`);
+console.log(`[config] CACHE_DIR=${CACHE_DIR}`);
+console.log(`[config] FIT_DIR=${FIT_DIR}`);
+console.log(`[config] GPX_DIR=${GPX_DIR}`);
+console.log(`[config] TCX_DIR=${TCX_DIR}`);
 
 const parser = new XMLParser({
   ignoreAttributes: false,

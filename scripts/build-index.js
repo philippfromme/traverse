@@ -1,3 +1,4 @@
+import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { XMLParser } from "fast-xml-parser";
@@ -11,6 +12,12 @@ const FIT_DIR = path.join(DATA_DIR, "fit");
 const INDEX_FILE = path.join(CACHE_DIR, "activity-index.json");
 const HEATMAP_FILE = path.join(CACHE_DIR, "heatmap-data.json");
 const NOMINATIM_DELAY_MS = 1500; // Nominatim requires max 1 req/s, use 1.5s for safety
+
+console.log(`[config] DATA_DIR=${DATA_DIR}`);
+console.log(`[config] CACHE_DIR=${CACHE_DIR}`);
+console.log(`[config] FIT_DIR=${FIT_DIR}`);
+console.log(`[config] GPX_DIR=${GPX_DIR}`);
+console.log(`[config] TCX_DIR=${TCX_DIR}`);
 
 const parser = new XMLParser({
   ignoreAttributes: false,
