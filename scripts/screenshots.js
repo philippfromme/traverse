@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import { spawn } from "child_process";
+import "dotenv/config";
 import fs from "fs";
 import path from "path";
 
@@ -7,8 +8,16 @@ const PORT = 3000;
 const BASE = `http://localhost:${PORT}`;
 const DOCS_DIR = path.resolve("docs");
 
+const CACHE_DIR = path.resolve(process.env.CACHE_DIR || "./cache");
+const INDEX_FILE = path.join(CACHE_DIR, "activity-index.json");
+
+if (!fs.existsSync(INDEX_FILE)) {
+  console.error(`Index file not found: ${INDEX_FILE}. Run 'npm run build:index' first.`);
+  process.exit(1);
+}
+
 // find a recent activity with GPS track
-const activities = JSON.parse(fs.readFileSync("data/activity-index.json", "utf-8"));
+const activities = JSON.parse(fs.readFileSync(INDEX_FILE, "utf-8"));
 const activityWithTrack = activities
   .filter((a) => a.hasTrack && a.distance > 1000)
   .sort((a, b) => new Date(b.time) - new Date(a.time))[0];
