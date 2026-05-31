@@ -1,7 +1,6 @@
 node_modules
+cache
 data
-gpx
-tcx
 docs
 .git
 .github
