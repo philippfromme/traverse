@@ -67,6 +67,12 @@ class AppHeader extends LitElement {
             @click=${this._closeMenu}
             >Stats</a
           >
+          <a
+            href="/upload"
+            class="header-link ${this.active === "upload" ? "active" : ""}"
+            @click=${this._closeMenu}
+            >Upload</a
+          >
         </nav>
       </div>
     `;

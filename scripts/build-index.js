@@ -368,13 +368,39 @@ async function main() {
   const gpxFileSet = new Set(gpxFiles.map((f) => path.basename(f, ".gpx")));
   const existingIds = new Set(Object.keys(existingIndex));
 
-  // Split GPX files into new/unchanged
-  const newGpxFiles = gpxFiles.filter((f) => !existingIds.has(path.basename(f, ".gpx")));
-  const unchangedGpxFiles = gpxFiles.filter((f) => existingIds.has(path.basename(f, ".gpx")));
+  // Split GPX files into: new, truly-unchanged, or needs-reindex (FIT/TCX support changed).
+  // "fitStem" and "hasTcx" are stored in the index to detect support-file changes on rebuild.
+  // Old index entries without these fields are treated as unchanged on first run (avoids mass
+  // re-parse on upgrade), and will gain the fields once they pass through the unchanged path.
+  const newGpxFiles = [];
+  const unchangedGpxFiles = [];
+  const reindexGpxFiles = []; // GPX exists in index but its backing FIT/TCX has changed
+  const reindexGpxSet = new Set();
 
-  // Existing FIT-only activities (in index but not backed by a GPX file)
+  for (const f of gpxFiles) {
+    const id = path.basename(f, ".gpx");
+    if (!existingIds.has(id)) {
+      newGpxFiles.push(f);
+      continue;
+    }
+    const indexed = existingIndex[id];
+    // Only compare when tracking fields are present (avoids mass re-index on first run)
+    if ("fitStem" in indexed || "hasTcx" in indexed) {
+      const currentFitStem = findMatchingFitStem(indexed.time);
+      const currentHasTcx = tcxFileSet.has(id);
+      if (currentFitStem !== (indexed.fitStem ?? null) || currentHasTcx !== (indexed.hasTcx ?? false)) {
+        reindexGpxFiles.push(f);
+        reindexGpxSet.add(id);
+        continue;
+      }
+    }
+    unchangedGpxFiles.push(f);
+  }
+
+  // Existing FIT-only activities (in index but not backed by a GPX file,
+  // and whose FIT file still exists on disk — filters out deleted activities)
   const existingFitOnlyActivities = Object.values(existingIndex).filter(
-    (a) => !gpxFileSet.has(a.id),
+    (a) => !gpxFileSet.has(a.id) && fitDataMap.has(a.id),
   );
 
   // 4. Track which FIT stems are matched to a GPX/TCX activity
@@ -394,8 +420,8 @@ async function main() {
 
   // 5. Pre-parse all new GPX files (cache results to avoid double-parsing)
   //    This must happen before the heatmap step so newFitOnlyStems is complete.
-  const parsedNewGpxMap = new Map(); // activityId → { gpxData, tcxData, fitData }
-  for (const file of newGpxFiles) {
+  const parsedNewGpxMap = new Map(); // activityId → { gpxData, tcxData, fitData, fitStem }
+  for (const file of [...newGpxFiles, ...reindexGpxFiles]) {
     const activityId = path.basename(file, ".gpx");
     try {
       const gpxData = parseGpxFile(path.join(GPX_DIR, file));
@@ -414,7 +440,7 @@ async function main() {
       const fitData = fitStem ? fitDataMap.get(fitStem) : null;
       if (fitStem) matchedFitStems.add(fitStem);
 
-      parsedNewGpxMap.set(activityId, { gpxData, tcxData, fitData });
+      parsedNewGpxMap.set(activityId, { gpxData, tcxData, fitData, fitStem: fitStem ?? null });
     } catch (err) {
       console.warn(`  Failed to parse ${file}: ${err.message}`);
     }
@@ -426,14 +452,16 @@ async function main() {
   );
 
   console.log(
-    `Processing ${parsedNewGpxMap.size} new GPX activities, reusing ${unchangedGpxFiles.length} cached, ` +
+    `Processing ${newGpxFiles.length} new GPX activities` +
+    (reindexGpxFiles.length > 0 ? ` + ${reindexGpxFiles.length} reindexed (FIT/TCX changed)` : "") +
+    `, reusing ${unchangedGpxFiles.length} cached, ` +
     `${existingFitOnlyActivities.length} existing FIT-only, ${newFitOnlyStems.length} new FIT-only.`,
   );
 
   // 6. Heatmap: use FIT type when a match exists; include FIT-only trackpoints
   const heatmapExists = fs.existsSync(HEATMAP_FILE);
   const needsHeatmapRebuild = !heatmapExists;
-  const needsHeatmapAppend = heatmapExists && (parsedNewGpxMap.size > 0 || newFitOnlyStems.length > 0);
+  const needsHeatmapAppend = heatmapExists && (newGpxFiles.length > 0 || newFitOnlyStems.length > 0);
 
   if (needsHeatmapRebuild) {
     console.log(`Building heatmap data from scratch...`);
@@ -489,8 +517,9 @@ async function main() {
     const heatmapByType = JSON.parse(fs.readFileSync(HEATMAP_FILE, "utf-8"));
     let newPoints = 0;
 
-    // New GPX tracks (use cached parsed data)
-    for (const [, { gpxData, fitData }] of parsedNewGpxMap) {
+    // New GPX tracks (use cached parsed data; skip reindexed — already in heatmap)
+    for (const [activityId, { gpxData, fitData }] of parsedNewGpxMap) {
+      if (reindexGpxSet.has(activityId)) continue;
       if (!gpxData || gpxData.trackpoints.length === 0) continue;
 
       const type = fitData?.type ?? gpxData.type ?? "unknown";
@@ -548,17 +577,21 @@ async function main() {
         activity.startLon = fitData.startLon;
       }
     }
+    activity.fitStem = fitStem ?? null;
+    activity.hasTcx = tcxFileSet.has(id);
     activities.push(activity);
   }
 
-  // Add existing FIT-only activities
-  activities.push(...existingFitOnlyActivities);
+  // Add existing FIT-only activities (ensure fitStem/hasTcx are present)
+  for (const a of existingFitOnlyActivities) {
+    activities.push({ ...a, fitStem: a.fitStem ?? a.id, hasTcx: false });
+  }
 
   // 8. Index new GPX activities (using pre-parsed cache)
   if (parsedNewGpxMap.size > 0) {
-    console.log(`Indexing ${parsedNewGpxMap.size} new GPX activities...`);
+    console.log(`Indexing ${parsedNewGpxMap.size} new/reindexed GPX activities...`);
 
-    for (const [activityId, { gpxData, tcxData, fitData }] of parsedNewGpxMap) {
+    for (const [activityId, { gpxData, tcxData, fitData, fitStem }] of parsedNewGpxMap) {
       // FIT from watch has no GPS — track data comes from GPX (preferred) or TCX
       const trackpoints = gpxData.hasTrack
         ? gpxData.trackpoints
@@ -585,7 +618,9 @@ async function main() {
         calories: fitData?.calories ?? tcxData?.calories ?? null,
         startLat,
         startLon,
-        location: null,
+        fitStem: fitStem ?? null,
+        hasTcx: tcxFileSet.has(activityId),
+        location: existingIndex[activityId]?.location ?? null,
       });
     }
   }
@@ -612,6 +647,8 @@ async function main() {
         calories: fitData.calories,
         startLat: fitData.startLat,
         startLon: fitData.startLon,
+        fitStem: stem,
+        hasTcx: false,
         location: null,
       });
     }

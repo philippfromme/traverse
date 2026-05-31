@@ -8,5 +8,5 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ./data:/app/data:ro
+      - ./data:/app/data
       - ./cache:/app/cache

@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Traverse — Upload</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/fonts.css" />
+    <link rel="stylesheet" href="/fonts/material-symbols/outlined.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "lit": "https://esm.sh/lit@3"
+        }
+      }
+    </script>
+    <style>
+      upload-page {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        padding: 12px;
+        flex: 1;
+      }
+
+      .upload-dropzone {
+        border: 2px dashed var(--border-strong);
+        padding: 48px 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        color: var(--fg-muted);
+      }
+
+      .upload-dropzone.drag-over {
+        border-color: var(--accent);
+        background: var(--bg-elevated);
+        color: var(--fg);
+      }
+
+      .upload-dropzone .material-symbols-outlined {
+        font-size: 48px;
+        color: var(--fg-dim);
+      }
+
+      .upload-dropzone.drag-over .material-symbols-outlined {
+        color: var(--accent);
+      }
+
+      .upload-dropzone input[type="file"] {
+        display: none;
+      }
+
+      .upload-file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .upload-file-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+      }
+
+      .upload-file-item .material-symbols-outlined {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      .upload-file-item .file-name {
+        flex: 1;
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .upload-file-item .file-status {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+      }
+
+      .file-status.pending   { color: var(--fg-dim); }
+      .file-status.uploading { color: var(--fg-muted); }
+      .file-status.done      { color: var(--accent); }
+      .file-status.error     { color: #ff4444; }
+      .file-status.conflict  { color: var(--color-error, #e53e3e); }
+
+      .upload-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn {
+        padding: 8px 20px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+        border: 1px solid var(--border-strong);
+        background: transparent;
+        color: var(--fg);
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+      }
+
+      .btn:hover {
+        background: var(--bg-elevated);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #000;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+      }
+
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .upload-summary {
+        font-size: 0.9rem;
+        color: var(--fg-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <app-header active="upload"></app-header>
+    <upload-page></upload-page>
+    <script type="module" src="/components/app-header.js"></script>
+    <script type="module">
+      import { LitElement, html } from "lit";
+
+      class UploadPage extends LitElement {
+        static properties = {
+          _files: { state: true },
+          _uploading: { state: true },
+          _dragOver: { state: true },
+        };
+
+        constructor() {
+          super();
+          this._files = []; // [{ file, status: 'pending'|'uploading'|'conflict'|'done'|'error', message }]
+          this._uploading = false;
+          this._dragOver = false;
+        }
+
+        createRenderRoot() {
+          return this;
+        }
+
+        _onDragOver(e) {
+          e.preventDefault();
+          this._dragOver = true;
+        }
+
+        _onDragLeave() {
+          this._dragOver = false;
+        }
+
+        _onDrop(e) {
+          e.preventDefault();
+          this._dragOver = false;
+          const dropped = Array.from(e.dataTransfer.files);
+          this._addFiles(dropped);
+        }
+
+        _onFileInput(e) {
+          const selected = Array.from(e.target.files);
+          this._addFiles(selected);
+          e.target.value = "";
+        }
+
+        _onDropzoneClick() {
+          this.querySelector("#file-input").click();
+        }
+
+        _addFiles(newFiles) {
+          const valid = newFiles.filter((f) =>
+            /\.(gpx|tcx|fit)$/i.test(f.name)
+          );
+          const invalid = newFiles.filter(
+            (f) => !/\.(gpx|tcx|fit)$/i.test(f.name)
+          );
+          const entries = valid.map((file) => ({
+            file,
+            status: "pending",
+            message: "",
+          }));
+          if (invalid.length) {
+            for (const f of invalid) {
+              entries.push({ file: f, status: "error", message: "Unsupported type" });
+            }
+          }
+          this._files = [...this._files, ...entries];
+        }
+
+        _removeFile(index) {
+          this._files = this._files.filter((_, i) => i !== index);
+        }
+
+        _clearDone() {
+          this._files = this._files.filter((f) => f.status !== "done");
+        }
+
+        _updateEntry(fileRef, patch) {
+          this._files = this._files.map((f) =>
+            f.file === fileRef ? { ...f, ...patch } : f
+          );
+        }
+
+        async _uploadEntry(entry, replace = false) {
+          const fileRef = entry.file;
+          this._updateEntry(fileRef, { status: "uploading" });
+          try {
+            const url = `/api/upload?filename=${encodeURIComponent(fileRef.name)}${
+              replace ? "&replace=true" : ""
+            }`;
+            const res = await fetch(url, {
+              method: "POST",
+              body: fileRef,
+              headers: { "Content-Type": "application/octet-stream" },
+            });
+            const json = await res.json();
+            if (res.ok) {
+              this._updateEntry(fileRef, { status: "done", message: json.id });
+            } else if (res.status === 409 && json.conflict) {
+              this._updateEntry(fileRef, { status: "conflict", message: "Already exists" });
+            } else {
+              this._updateEntry(fileRef, { status: "error", message: json.error || "Upload failed" });
+            }
+          } catch (err) {
+            this._updateEntry(fileRef, { status: "error", message: "Network error" });
+          }
+        }
+
+        async _upload() {
+          const pending = this._files.filter((f) => f.status === "pending");
+          if (!pending.length || this._uploading) return;
+          this._uploading = true;
+          for (const entry of pending) {
+            await this._uploadEntry(entry);
+          }
+          this._uploading = false;
+        }
+
+        async _replace(entry) {
+          await this._uploadEntry(entry, true);
+        }
+
+        async _replaceAll() {
+          const conflicts = this._files.filter((f) => f.status === "conflict");
+          if (!conflicts.length || this._uploading) return;
+          this._uploading = true;
+          for (const entry of conflicts) {
+            await this._uploadEntry(entry, true);
+          }
+          this._uploading = false;
+        }
+
+        _discardAll() {
+          this._files = this._files.filter((f) => f.status !== "conflict");
+          this.requestUpdate();
+        }
+
+        _statusIcon(status) {
+          switch (status) {
+            case "pending":   return "schedule";
+            case "uploading": return "sync";
+            case "conflict":  return "error";
+            case "done":      return "check_circle";
+            case "error":     return "error";
+            default:          return "insert_drive_file";
+          }
+        }
+
+        render() {
+          const pending   = this._files.filter((f) => f.status === "pending").length;
+          const done      = this._files.filter((f) => f.status === "done").length;
+          const conflicts = this._files.filter((f) => f.status === "conflict").length;
+          const hasFiles  = this._files.length > 0;
+
+          return html`
+            <h2>Upload Activities</h2>
+
+            <div
+              class="upload-dropzone ${this._dragOver ? "drag-over" : ""}"
+              @dragover=${this._onDragOver}
+              @dragleave=${this._onDragLeave}
+              @drop=${this._onDrop}
+              @click=${this._onDropzoneClick}
+            >
+              <span class="material-symbols-outlined">upload_file</span>
+              <div>
+                <strong>Drop files here</strong> or click to browse
+              </div>
+              <div style="font-size:0.85rem">GPX, TCX, FIT</div>
+              <input
+                id="file-input"
+                type="file"
+                accept=".gpx,.tcx,.fit"
+                multiple
+                @change=${this._onFileInput}
+              />
+            </div>
+
+            ${hasFiles
+              ? html`
+                  <div class="upload-file-list">
+                    ${this._files.map(
+                      (entry, i) => html`
+                        <div class="upload-file-item">
+                          <span class="material-symbols-outlined file-status ${entry.status}">
+                            ${this._statusIcon(entry.status)}
+                          </span>
+                          <span class="file-name">${entry.file.name}</span>
+                          ${entry.status === "conflict"
+                            ? html`
+                                <span class="file-status conflict">Already exists</span>
+                                <button
+                                  class="btn btn-primary"
+                                  style="padding:4px 10px;font-size:0.8rem"
+                                  ?disabled=${this._uploading}
+                                  @click=${() => this._replace(entry)}
+                                >Replace</button>
+                                <button
+                                  class="btn"
+                                  style="padding:4px 10px;font-size:0.8rem"
+                                  @click=${() => this._removeFile(i)}
+                                >Discard</button>
+                              `
+                            : html`
+                                ${entry.status !== "uploading"
+                                  ? html`<button
+                                      class="btn"
+                                      style="padding:4px 8px;font-size:0.8rem"
+                                      @click=${() => this._removeFile(i)}
+                                    >
+                                      <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">close</span>
+                                    </button>`
+                                  : ""}
+                              `}
+                        </div>
+                      `
+                    )}
+                  </div>
+
+                  <div class="upload-actions">
+                    <button
+                      class="btn btn-primary"
+                      ?disabled=${this._uploading || pending === 0}
+                      @click=${this._upload}
+                    >
+                      Upload${pending > 0 ? ` (${pending})` : ""}
+                    </button>
+                    ${conflicts > 0
+                      ? html`
+                          <button
+                            class="btn btn-primary"
+                            ?disabled=${this._uploading}
+                            @click=${this._replaceAll}
+                          >Replace all (${conflicts})</button>
+                          <button
+                            class="btn"
+                            ?disabled=${this._uploading}
+                            @click=${this._discardAll}
+                          >Discard all (${conflicts})</button>
+                        `
+                      : ""}
+                    ${done > 0
+                      ? html`<button class="btn" @click=${this._clearDone}>
+                          Clear done
+                        </button>`
+                      : ""}
+                  </div>
+
+                `
+              : ""}
+          `;
+        }
+      }
+
+      customElements.define("upload-page", UploadPage);
+    </script>
+    <app-footer></app-footer>
+    <script type="module" src="/components/app-footer.js"></script>
+  </body>
+</html>

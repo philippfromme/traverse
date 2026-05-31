@@ -191,6 +191,57 @@ app.use(
 
 app.use(express.static(PUBLIC_DIR));
 
+// API: upload a GPX, TCX, or FIT file
+app.post("/api/upload", express.raw({ type: "*/*", limit: "50mb" }), async (req, res) => {
+  const originalName = req.query.filename || "";
+  console.log(`[upload] filename=${originalName} body type=${typeof req.body} body length=${req.body?.length ?? "n/a"}`);
+  // only take the basename to prevent path traversal
+  const basename = path.basename(originalName);
+  const ext = path.extname(basename).toLowerCase();
+
+  const allowed = { ".gpx": GPX_DIR, ".tcx": TCX_DIR, ".fit": FIT_DIR };
+  if (!allowed[ext]) {
+    console.log(`[upload] rejected: unsupported extension "${ext}"`);
+    return res.status(400).json({ error: "Only .gpx, .tcx, or .fit files are supported" });
+  }
+
+  // validate filename is safe (alphanumeric, hyphens, underscores, dots only)
+  if (!/^[\w.-]+$/.test(basename)) {
+    console.log(`[upload] rejected: unsafe filename "${basename}"`);
+    return res.status(400).json({ error: "Invalid filename" });
+  }
+
+  const targetDir = allowed[ext];
+
+  if (!fs.existsSync(targetDir)) {
+    console.log(`[upload] creating directory ${targetDir}`);
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+
+  const destPath = path.join(targetDir, basename);
+  const replace = req.query.replace === "true";
+  console.log(`[upload] destPath=${destPath} replace=${replace} exists=${fs.existsSync(destPath)}`);
+
+  if (fs.existsSync(destPath) && !replace) {
+    console.log(`[upload] conflict: file already exists`);
+    return res.status(409).json({ conflict: true, filename: basename });
+  }
+
+  try {
+    if (!req.body || !Buffer.isBuffer(req.body) || req.body.length === 0) {
+      console.error(`[upload] body is not a Buffer: type=${typeof req.body} value=${req.body}`);
+      return res.status(400).json({ error: "Request body is empty or was not parsed as binary" });
+    }
+    await fs.promises.writeFile(destPath, req.body);
+    const id = path.basename(basename, ext);
+    console.log(`[upload] saved ${destPath} (${req.body.length} bytes), id=${id}`);
+    res.json({ filename: basename, id });
+  } catch (err) {
+    console.error(`[upload] writeFile failed:`, err);
+    res.status(500).json({ error: `Failed to save file: ${err.message}` });
+  }
+});
+
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
@@ -378,6 +429,10 @@ app.get("/stats/:type", (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, "stats-type.html"));
 });
 
+app.get("/upload", (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, "upload.html"));
+});
+
 const server = app.listen(PORT, async () => {
   const url = `http://localhost:${PORT}`;
   console.log(`Viewer running at ${url}`);
@@ -401,14 +456,18 @@ let rebuilding = false;
 function scheduleRebuild() {
   if (rebuildTimer) clearTimeout(rebuildTimer);
   rebuildTimer = setTimeout(async () => {
-    if (rebuilding) return;
+    if (rebuilding) {
+      console.log("[rebuild] already in progress, skipping");
+      return;
+    }
     rebuilding = true;
+    console.log("[rebuild] starting index rebuild...");
     try {
       await buildIndex();
       reloadData();
-      console.log("Index reloaded.");
+      console.log("[rebuild] done.");
     } catch (err) {
-      console.error("Index rebuild failed:", err.message);
+      console.error("[rebuild] failed:", err.message);
     } finally {
       rebuilding = false;
     }
@@ -417,7 +476,9 @@ function scheduleRebuild() {
 
 for (const dir of [FIT_DIR, GPX_DIR, TCX_DIR]) {
   if (fs.existsSync(dir)) {
-    fs.watch(dir, (eventType) => {
+    console.log(`[watch] watching ${dir}`);
+    fs.watch(dir, (eventType, filename) => {
+      console.log(`[watch] ${dir} event=${eventType} file=${filename}`);
       if (eventType === "rename") scheduleRebuild();
     });
   }
