@@ -266,7 +266,42 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const GEOCODE_CACHE_FILE = path.join(CACHE_DIR, "geocode-cache.json");
+const GEOCODE_PROXIMITY_THRESHOLD = 1000; // meters — reuse cached location if within this distance
+
+let geocodeCache = [];
+
+function loadGeocodeCache() {
+  if (fs.existsSync(GEOCODE_CACHE_FILE)) {
+    try {
+      geocodeCache = JSON.parse(fs.readFileSync(GEOCODE_CACHE_FILE, "utf-8"));
+    } catch {
+      geocodeCache = [];
+    }
+  }
+}
+
+function saveGeocodeCache() {
+  fs.writeFileSync(GEOCODE_CACHE_FILE, JSON.stringify(geocodeCache, null, 2));
+}
+
+function findCachedLocation(lat, lon) {
+  for (const entry of geocodeCache) {
+    const dist = haversineDistance(lat, lon, entry.lat, entry.lon);
+    if (dist <= GEOCODE_PROXIMITY_THRESHOLD) {
+      return entry.location;
+    }
+  }
+  return null;
+}
+
 async function reverseGeocode(lat, lon, retries = 5) {
+  const cached = findCachedLocation(lat, lon);
+  if (cached) {
+    console.log(`    Using cached location: ${cached}`);
+    return cached;
+  }
+
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10&addressdetails=1`;
 
   for (let attempt = 0; attempt < retries; attempt++) {
@@ -315,7 +350,13 @@ async function reverseGeocode(lat, lon, retries = 5) {
     const country = addr.country;
 
     const parts = [city, state, country].filter(Boolean);
-    return parts.length > 0 ? parts.join(", ") : null;
+    const location = parts.length > 0 ? parts.join(", ") : null;
+
+    if (location) {
+      geocodeCache.push({ lat, lon, location });
+    }
+
+    return location;
   }
 
   return null;
@@ -323,6 +364,8 @@ async function reverseGeocode(lat, lon, retries = 5) {
 
 async function main() {
   const startTime = Date.now();
+
+  loadGeocodeCache();
 
   // 1. Load file lists
   const fitStems = fs.existsSync(FIT_DIR)
@@ -580,6 +623,7 @@ async function main() {
 
     for (let i = 0; i < toGeocode.length; i++) {
       const a = toGeocode[i];
+      const wasCached = findCachedLocation(a.startLat, a.startLon) != null;
 
       try {
         const location = await reverseGeocode(a.startLat, a.startLon);
@@ -604,10 +648,12 @@ async function main() {
         console.log(`  (saved progress)`);
       }
 
-      if (i < toGeocode.length - 1) {
+      if (!wasCached && i < toGeocode.length - 1) {
         await sleep(NOMINATIM_DELAY_MS);
       }
     }
+
+    saveGeocodeCache();
   }
 
   // 8. Sort by date descending and write
