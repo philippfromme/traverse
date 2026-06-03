@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node viewer/server.js",
     "build:index": "node scripts/build-index.js",
+    "build:index:force": "node scripts/build-index.js --force",
     "screenshots": "node scripts/screenshots.js",
     "release": "npx np --no-publish --no-tests"
   },

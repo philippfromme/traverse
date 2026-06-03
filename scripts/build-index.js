@@ -380,9 +380,12 @@ async function main() {
 
   console.log(`Found ${fitStems.length} FIT, ${tcxStems.length} TCX, ${gpxStems.length} GPX files.`);
 
-  // 2. Load existing index
+  // 2. Load existing index (skip if --force)
+  const forceRebuild = process.argv.includes("--force");
+  if (forceRebuild) console.log("[force] Rebuilding all activities from scratch.");
+
   let existingIndex = {};
-  if (fs.existsSync(INDEX_FILE)) {
+  if (!forceRebuild && fs.existsSync(INDEX_FILE)) {
     try {
       const existing = JSON.parse(fs.readFileSync(INDEX_FILE, "utf-8"));
       for (const a of existing) existingIndex[a.id] = a;
