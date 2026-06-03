@@ -208,10 +208,13 @@ function parseTcxFile(filePath) {
 }
 
 function fitSportToType(sport, subSport) {
+  if (sport && typeof sport === "string" && sport !== "generic") {
+    return sport;
+  }
   if (subSport && typeof subSport === "string" && subSport !== "generic") {
     return subSport;
   }
-  return sport || "unknown";
+  return "unknown";
 }
 
 function capitalizeType(type) {
