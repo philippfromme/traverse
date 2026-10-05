@@ -78,6 +78,8 @@ class CustomSelect extends HTMLElement {
 
     const trigger = document.createElement("button");
     trigger.type = "button";
+    if (this.hasAttribute("aria-label")) trigger.setAttribute("aria-label", this.getAttribute("aria-label"));
+    trigger.setAttribute("aria-expanded", String(this._open));
     trigger.className = "custom-select-trigger";
     trigger.addEventListener("click", (e) => this._toggle(e));
 

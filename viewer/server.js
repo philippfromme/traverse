@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { XMLParser } from "fast-xml-parser";
 import FitParser from "fit-file-parser";
+import { registerGoals } from "./goals.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,7 +18,7 @@ const TCX_DIR = path.join(DATA_DIR, "tcx");
 const PUBLIC_DIR = path.join(__dirname, "public");
 const INDEX_FILE = path.join(CACHE_DIR, "activity-index.json");
 const HEATMAP_FILE = path.join(CACHE_DIR, "heatmap-data.json");
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 
 console.log(`[config] DATA_DIR=${DATA_DIR}`);
 console.log(`[config] CACHE_DIR=${CACHE_DIR}`);
@@ -178,6 +179,12 @@ function buildSummary(activities) {
 let activitySummary = buildSummary(activityIndex);
 
 const app = express();
+registerGoals(app, {
+  dataDir: DATA_DIR,
+  getActivities: () => activityIndex,
+  demo: process.env.GOALS_DEMO === "1",
+  sourceUrl: process.env.GOALS_DEMO === "1" ? process.env.GOALS_SOURCE_URL || "" : "",
+});
 
 app.use(
   "/fonts/geist-sans",
@@ -432,6 +439,10 @@ app.get("/stats", (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, "stats.html"));
 });
 
+app.get("/goals", (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, "goals.html"));
+});
+
 app.get("/stats/:type", (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, "stats-type.html"));
 });
@@ -445,8 +456,10 @@ const server = app.listen(PORT, async () => {
   console.log(`Viewer running at ${url}`);
 
   try {
-    const { default: open } = await import("open");
-    open(url);
+    if (process.env.OPEN_BROWSER !== "0") {
+      const { default: open } = await import("open");
+      open(url);
+    }
   } catch {}
 });
 

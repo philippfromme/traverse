@@ -68,6 +68,12 @@ class AppHeader extends LitElement {
             >Stats</a
           >
           <a
+            href="/goals"
+            class="header-link ${this.active === "goals" ? "active" : ""}"
+            @click=${this._closeMenu}
+            >Goals</a
+          >
+          <a
             href="/upload"
             class="header-link ${this.active === "upload" ? "active" : ""}"
             @click=${this._closeMenu}

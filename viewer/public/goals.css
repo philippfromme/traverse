@@ -1,0 +1,69 @@
+goals-page{display:flex;flex:1;flex-direction:column;gap:12px;padding:12px;--goal-muted:#b7b7b7}
+.goals-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:12px 0}.goals-heading h1{font-size:2rem;margin:0 0 6px}.goals-heading p{margin:0;font-size:14px;color:var(--goal-muted)}.goals-actions{display:flex;gap:8px;align-items:center}.goals-button{border:1px solid var(--border);border-radius:0;background:var(--bg);color:var(--fg);font:14px Geist,sans-serif;line-height:1.4;padding:10px 14px;cursor:pointer;min-height:40px}.goals-button:hover{border-color:var(--fg)}.goals-button.primary{background:var(--accent);border-color:var(--accent);color:#000}.goals-button.primary:hover{background:var(--accent-hover)}.goals-button:disabled{opacity:.5;cursor:wait}.goals-button.quiet{background:none}.goals-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;padding:0}.goals-filters label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--goal-muted);display:flex;flex-direction:column;gap:5px}.goals-filters custom-select{min-width:150px;font:15px Geist,sans-serif;text-transform:none;letter-spacing:normal}.goals-filters .goals-count{font-size:14px;color:var(--goal-muted);margin-left:auto;align-self:center}.goals-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}.goal-category{background:var(--bg-elevated);padding:24px;min-width:0}.goal-category-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.goal-category-header h2{font-size:1.5rem;margin:0}.goal-category-header span{font-size:12px;color:var(--goal-muted);text-transform:uppercase;letter-spacing:.06em}.goal-card{background:var(--bg);padding:20px;margin-top:12px}.goal-card .goal-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--goal-muted);display:flex;justify-content:space-between;gap:12px;margin:0 0 12px}.goal-card .goal-label .achieved{color:var(--accent)}.goal-card h3{font-size:1.3rem;margin:0}.goal-number{font:clamp(2.4rem,4.5vw,4rem)/1.15 'Geist Pixel',sans-serif;margin:20px 0 14px;overflow-wrap:anywhere}.goal-number small{font:16px Geist,sans-serif;color:var(--goal-muted);white-space:normal}.goal-meter{height:3px;background:var(--border);margin:12px 0 14px}.goal-meter span{display:block;background:var(--accent);height:100%}.goal-description{font-size:14px;line-height:1.5;color:var(--goal-muted);margin:0 0 12px}.goal-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px}.goal-footer small{font-size:12px;color:var(--goal-muted)}.goal-footer>div{display:flex;gap:8px}.goal-footer button{font-size:14px;background:none;color:var(--fg);border:0;text-decoration:underline;text-underline-offset:4px;cursor:pointer;padding:4px}.goal-card.compact .goal-title-row{display:flex;justify-content:space-between;align-items:start;gap:16px}.goal-card.compact .goal-number{font-size:1.9rem;margin:0}.goal-card.compact .goal-number small{font-size:14px}.goal-card.compact .goal-footer{margin-top:10px}.goal-card.compact .goal-description{margin:12px 0 0}.goal-checklist{display:flex;flex-direction:column;gap:12px;margin:18px 0}.goal-checklist label{display:flex;align-items:center;gap:12px;font-size:16px}.goals-demo{padding:12px 20px;background:var(--m24-light-green);font-size:14px;color:var(--goal-muted);border-left:3px solid var(--accent)}.goals-demo strong{color:var(--fg);font-weight:500}.goals-empty{padding:40px 24px;background:var(--bg-elevated)}.goals-empty h2{margin:0 0 12px}.goals-empty p{max-width:65ch;color:var(--goal-muted)}.goals-empty .goals-actions{margin-top:20px;flex-wrap:wrap}.goals-error{color:#ffb3b3;font-size:14px;margin:8px 0}.goals-error-panel{background:var(--bg-elevated);padding:20px}.goals-note{font-size:12px;color:var(--goal-muted);margin:0;padding:8px}.goals-trend{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;height:150px;margin:24px 0 0}.goals-trend-item{display:flex;flex-direction:column;justify-content:end;height:100%;align-items:center;gap:6px;min-width:0}.goals-trend-item .bar{width:100%;min-height:2px;background:var(--accent);max-height:95px}.goals-trend-item .bar.zero{background:var(--border)}.goals-trend-item span{font-size:12px;line-height:1.2;color:var(--goal-muted);text-align:center}.goal-details h3{margin:24px 0 12px}.goal-activity{padding:12px 0;display:flex;justify-content:space-between;gap:12px;font-size:14px}.goal-activity a{color:var(--fg);text-underline-offset:3px}.goal-activity small{font-size:12px;color:var(--goal-muted);display:block}.goal-details p{font-size:14px;color:var(--goal-muted)}.goals-dialog{background:var(--bg-elevated);color:var(--fg);border:0;border-radius:0;padding:24px;width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;color-scheme:dark}.goals-dialog::backdrop{background:#000c;backdrop-filter:blur(4px)}.goals-dialog-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.goals-dialog-header h2{font-size:1.4rem;margin:0}.goals-dialog-header button{font:24px Geist,sans-serif;cursor:pointer;border:0;color:var(--fg);background:none;padding:0 6px}.goals-form{display:flex;flex-direction:column;gap:16px}.goals-form label{display:flex;flex-direction:column;gap:6px;font-size:14px}.goals-form input,.goals-form textarea{font:16px/1.4 Geist,sans-serif;background:#000;color:var(--fg);border:1px solid var(--border);border-radius:0;padding:10px;width:100%;min-width:0}.goals-form textarea{min-height:100px;resize:vertical}.goals-form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.goals-form .helper{font-size:12px;line-height:1.5;color:var(--goal-muted);margin:0}.goals-form fieldset{border:0;padding:0;margin:0;min-width:0}.goals-form legend{font-size:14px;padding:0;margin-bottom:12px}.goals-form .type-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}.goals-form .type-options label{display:flex;flex-direction:row;align-items:center;font-size:14px}.goals-form-footer{display:flex;justify-content:end;align-items:center;gap:8px;flex-wrap:wrap}.goals-form-footer .archive{margin-right:auto}.goal-category-form{display:flex;align-items:end;gap:10px;margin-bottom:12px}.goal-category-form label{flex:1}.goals-status{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:2000;background:var(--accent);color:#000;font-size:14px;padding:12px 20px;max-width:calc(100vw - 24px)}goals-page :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:850px){.goals-columns{grid-template-columns:1fr}.goal-category{padding:20px}.goals-heading{align-items:flex-start}.goals-heading .goals-actions{flex-wrap:wrap;justify-content:end}}
+@media(max-width:520px){.goals-heading{padding:12px 0;flex-wrap:wrap}.goals-heading h1{font-size:1.6rem}.goals-heading .goals-actions{justify-content:start;width:100%}.goals-filters{padding:0;gap:12px}.goals-filters label{flex:1;min-width:120px}.goals-filters custom-select{min-width:0}.goals-filters .goals-count{width:100%;margin-left:0}.goal-category{padding:16px}.goal-card{padding:16px}.goal-card h3{font-size:1.2rem}.goal-number{font-size:2.8rem}.goal-card.compact .goal-number{font-size:1.6rem}.goal-card.compact .goal-title-row{flex-wrap:wrap}.goal-footer{flex-wrap:wrap}.goals-dialog{padding:18px}.goals-form .form-grid,.goals-form .type-options{grid-template-columns:1fr}.goal-activity{flex-wrap:wrap}.goals-trend{gap:6px}.goal-category-header h2{font-size:1.3rem}}
+
+/* Reuse the Activities dropdown component and its shared styles. */
+.goals-filters .custom-select-trigger,.goals-form .custom-select-trigger{width:100%}
+.goals-form custom-select{display:block;min-width:0}
+.goals-form .custom-select-label{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.goals-form .custom-select-dropdown{width:100%;background:var(--bg);border:1px solid var(--border);border-top:0}
+.goals-form .custom-select-option{font:16px/1.4 Geist,sans-serif;padding:10px;white-space:normal;overflow-wrap:anywhere;flex-shrink:0}
+.goals-form .custom-select-option:hover{background:var(--bg-elevated)}
+
+/* Keep single-line form controls and adjacent actions the same height. */
+.goals-form input:not([type="checkbox"]),.goals-form .goals-button{height:44px;min-height:44px}
+.goals-form .custom-select-trigger{height:44px;min-height:44px;min-width:0;border:1px solid var(--border);border-radius:0;background:var(--bg);font:16px/1.4 Geist,sans-serif;padding:10px}
+.goal-category-form label{min-width:0}
+.goal-category-editor-row{min-width:0}
+.goal-category-removal{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--border);margin-bottom:12px}
+.goal-removed-categories{font-size:14px}
+.goal-removed-categories summary{cursor:pointer}
+.goal-removed-category{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px}
+@media(max-width:520px){.goal-category-form{flex-wrap:wrap}.goal-category-form label{flex-basis:100%}}
+
+.goal-activity + .goal-activity{border-top:1px solid var(--border)}
+
+/* Square, flat checkboxes across goal forms and skill milestones. */
+goals-page input[type="checkbox"]{
+  appearance:none;
+  -webkit-appearance:none;
+  width:18px;
+  height:18px;
+  min-width:18px;
+  flex:none;
+  margin:0;
+  padding:0;
+  border:1px solid var(--border-strong);
+  border-radius:0;
+  background:var(--bg);
+  box-shadow:none;
+  cursor:pointer;
+}
+goals-page input[type="checkbox"]:hover:not(:disabled){border-color:var(--fg)}
+goals-page input[type="checkbox"]:checked{
+  border-color:var(--accent);
+  background-color:var(--accent);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 8 3 3 7-7' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='square'/%3E%3C/svg%3E");
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:12px 12px;
+}
+goals-page input[type="checkbox"]:disabled{opacity:.5;cursor:default}
+@media(forced-colors:active){goals-page input[type="checkbox"]{appearance:auto;background-image:none}}
+
+/* The modal is the only scrolling surface while it is open. */
+html:has(goals-page){scrollbar-gutter:stable}
+html:has(.goals-dialog[open]),body:has(.goals-dialog[open]){overflow:hidden}
+
+.goal-milestone-rows{display:flex;flex-direction:column;gap:10px}
+.goal-milestone-row{display:grid;grid-template-columns:24px minmax(0,1fr) 44px;align-items:center;gap:10px}
+.goal-milestone-number{font:14px 'Geist Pixel',sans-serif;color:var(--goal-muted)}
+.goal-milestone-remove{display:grid;place-items:center;padding:0;color:var(--goal-muted)}
+.goal-milestone-remove:hover{color:var(--fg)}
+.goal-milestone-remove .material-symbols-outlined{font-size:18px}
+.goal-milestone-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.goal-milestone-add{display:flex;align-items:center;gap:8px}
+.goal-milestone-add .material-symbols-outlined{font-size:18px}
+.goal-milestone-actions small{font-size:12px;color:var(--goal-muted)}
+@media(max-width:520px){.goal-milestone-row{grid-template-columns:20px minmax(0,1fr) 44px;gap:8px}}

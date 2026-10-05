@@ -833,8 +833,6 @@ feed-page {
 .feed-sidebar {
   position: sticky;
   top: 72px;
-  max-height: calc(100vh - 72px);
-  overflow-y: auto;
 }
 
 .feed-main {
@@ -844,13 +842,17 @@ feed-page {
 }
 
 .feed-summary {
+  --feed-summary-slide-gap: 32px;
   margin: 0;
   padding: 24px;
   background: var(--m24-green);
   color: var(--m24-white);
-  min-height: calc(100vh - 60px - 24px);
+  height: calc(100dvh - 84px);
   display: flex;
   flex-direction: column;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .feed-summary-title {
@@ -859,6 +861,250 @@ feed-page {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.feed-summary-tabs {
+  display: flex;
+  justify-content: center;
+  align-self: center;
+  margin-top: 12px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.feed-summary-ellipsis {
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+.feed-summary-viewport {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* The read-only content shares one stable mouse target with the card. */
+  pointer-events: none;
+}
+
+.feed-summary-retry {
+  pointer-events: auto;
+}
+
+.feed-summary-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.feed-summary-preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.feed-summary.settling .feed-summary-content,
+.feed-summary.settling .feed-summary-preview {
+  transition: transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (hover: hover) {
+  .feed-summary { cursor: grab; }
+  .feed-summary:active { cursor: grabbing; }
+  .feed-summary-viewport,
+  .feed-summary-viewport * { cursor: inherit; }
+  .feed-summary button { cursor: pointer; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-summary.settling .feed-summary-content,
+  .feed-summary.settling .feed-summary-preview {
+    transition: none;
+  }
+}
+
+.feed-summary-tabs button {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.feed-summary-tabs button::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+}
+
+.feed-summary-tabs button:hover::before {
+  opacity: 0.55;
+}
+
+.feed-summary-tabs button[aria-selected="true"]::before {
+  opacity: 1;
+}
+
+.feed-summary-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.feed-summary-panel[hidden] {
+  display: none;
+}
+
+/* Keep the goals layout measurable so the total dot count is ready on page one. */
+.feed-summary-panel.inactive {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.feed-summary-tabs button:focus-visible,
+.feed-summary-panel:focus-visible,
+.feed-summary-retry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+.feed-goals-heading,
+.feed-goal-heading,
+.feed-goal-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.feed-goals-heading > span {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.feed-goals-categories {
+  margin: 12px 0 6px;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.feed-goals-page,
+.feed-goals-measure {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feed-goals-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.feed-goals-category h2 {
+  margin: 0 0 8px;
+  color: inherit;
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feed-goal {
+  display: block;
+  padding: 3px 0;
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.feed-goal + .feed-goal {
+  margin-top: 4px;
+}
+
+.feed-goal-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.feed-goal-value {
+  text-align: right;
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow-wrap: anywhere;
+}
+
+.feed-goal-meter {
+  height: 3px;
+  margin: 4px 0 3px;
+  background: rgb(0 0 0 / 18%);
+}
+
+.feed-goal-meter span {
+  display: block;
+  height: 100%;
+  background: var(--m24-white);
+}
+
+.feed-goal-meta {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.feed-goal-meta span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feed-goals-heading {
+  flex-shrink: 0;
+}
+
+.feed-goals-empty {
+  margin: auto 0;
+}
+
+.feed-summary-retry {
+  background: var(--m24-white);
+  color: var(--m24-green);
+  border: 0;
+  border-radius: 0;
+  padding: 10px 16px;
+  min-height: 44px;
+  font: inherit;
+  cursor: pointer;
 }
 
 .feed-summary-grid {
@@ -1306,6 +1552,8 @@ feed-page {
 
   .feed-sidebar {
     position: static;
+    max-height: none;
+    overflow: visible;
   }
 
   .feed-summary-grid {
@@ -1317,6 +1565,15 @@ feed-page {
   .feed-summary {
     padding: 16px;
     min-height: auto;
+    height: auto;
+  }
+
+  .feed-goals-categories {
+    flex: none;
+  }
+
+  .feed-goals-page {
+    min-height: 360px;
   }
 
   .feed-summary-value {
@@ -1372,6 +1629,11 @@ feed-page {
 }
 
 @media (max-width: 480px) {
+  .feed-goal-heading {
+    flex-wrap: wrap;
+    gap: 2px 12px;
+  }
+
   .feed-summary-grid {
     flex-direction: column;
   }
