@@ -9,6 +9,7 @@ import {
 import "./feed-map.js";
 import { paginateGoals } from "./feed-goals-pagination.js";
 import { swipeDirection, wheelSwipe } from "./feed-summary-gestures.js";
+import { countdown, raceDates, number } from './race-utils.js';
 
 const PAGE_SIZE = 20;
 const wellnessNumber = (value) => value == null ? "—" : Math.round(value).toLocaleString("en-GB");
@@ -83,6 +84,8 @@ class FeedPage extends LitElement {
     _summaryPage: { state: true },
     _goals: { state: true },
     _health: { state: true },
+    _races: { state: true },
+    _racesError: { state: true },
     _goalsError: { state: true },
     _goalPages: { state: true },
     _swipeOffset: { state: true },
@@ -104,6 +107,8 @@ class FeedPage extends LitElement {
     this._summaryPage = 0;
     this._goals = null;
     this._health = null;
+    this._races = null;
+    this._racesError = false;
     this._goalsError = false;
     this._goalPages = [];
     this._swipeOffset = 0;
@@ -193,8 +198,10 @@ class FeedPage extends LitElement {
   }
 
   get _goalStartPage() {
-    return this._health ? 3 : 1;
+    return this._racePage + 1;
   }
+
+  get _racePage() { return this._health ? 3 : 1; }
 
   _selectSummary(page) {
     if (page === this._summaryPage || this._swipeTarget !== null) return;
@@ -316,7 +323,7 @@ class FeedPage extends LitElement {
     this._activities = sorted.slice(0, PAGE_SIZE);
     this._hasMore = sorted.length > PAGE_SIZE;
     this._monthStats = computeMonthStats(sorted);
-    await this._loadHealth();
+    await Promise.all([this._loadHealth(), this._loadRaces()]);
     this._loading = false;
   }
 
@@ -337,6 +344,20 @@ class FeedPage extends LitElement {
     } catch {
       // The activity feed remains available when wellness data is unavailable.
     }
+  }
+
+  async _loadRaces() {
+    try {
+      const response = await fetch('/api/races/overview');
+      if (!response.ok) throw new Error('Could not load races');
+      this._races = await response.json(); this._racesError = false;
+    } catch { this._racesError = true; }
+  }
+
+  _renderRacesSummary() {
+    if (this._racesError) return html`<div class="feed-summary-title">Races</div><p role="status">Could not load your races.</p><button class="feed-summary-retry" @click=${this._loadRaces}>Try again</button>`;
+    const next = this._races?.nextRace, target = this._races?.target;
+    return html`<div class="feed-summary-title">Your next start</div>${next ? html`<h2 class="feed-race-name"><a href=${`/races?year=${next.startDate.slice(0, 4)}&race=${next.id}`}>${next.name}</a></h2><p class="feed-race-countdown">${countdown(next)}</p><p>${raceDates(next)} · ${number(next.distanceMeters / 1000)} km</p>${target ? html`<p class="feed-race-focus">✳ Training target: ${target.name}</p>` : nothing}` : html`<p>Add a race and give your training a focus.</p>`}<p><a href="/races">${next ? 'View your season' : 'Plan your first race'} ↗</a></p>`;
   }
 
   _loadMore() {
@@ -448,6 +469,7 @@ class FeedPage extends LitElement {
     if (page === 0) return this._renderMonthSummary();
     if (this._health && page === 1) return this._renderMovementSummary();
     if (this._health && page === 2) return this._renderRecoverySummary();
+    if (page === this._racePage) return this._renderRacesSummary();
     return this._renderGoalsSummary(page, measure);
   }
 
@@ -491,14 +513,15 @@ class FeedPage extends LitElement {
         <div class="feed-summary-content" style=${`transform:translateX(${this._swipeOffset}px)`}>
           <div id="feed-panel-month" class="feed-summary-panel" role="tabpanel" aria-labelledby="feed-tab-0" tabindex="0" ?hidden=${this._summaryPage !== 0}>${this._renderMonthSummary()}</div>
           ${this._health ? html`<div id="feed-panel-movement" class="feed-summary-panel" role="tabpanel" aria-labelledby="feed-tab-1" tabindex="0" ?hidden=${this._summaryPage !== 1}>${this._renderMovementSummary()}</div><div id="feed-panel-health" class="feed-summary-panel" role="tabpanel" aria-labelledby="feed-tab-2" tabindex="0" ?hidden=${this._summaryPage !== 2}>${this._renderRecoverySummary()}</div>` : nothing}
+          <div id="feed-panel-races" class="feed-summary-panel" role="tabpanel" aria-labelledby=${`feed-tab-${this._racePage}`} tabindex="0" ?hidden=${this._summaryPage !== this._racePage}>${this._renderRacesSummary()}</div>
           <div id="feed-panel-goals" class=${"feed-summary-panel" + (this._summaryPage < this._goalStartPage ? " inactive" : "")} role="tabpanel" aria-labelledby=${"feed-tab-" + Math.max(this._goalStartPage, this._summaryPage)} aria-hidden=${this._summaryPage < this._goalStartPage ? "true" : "false"} ?inert=${this._summaryPage < this._goalStartPage} tabindex="0">${this._renderGoalsSummary()}</div>
         </div>
         ${this._swipeTarget !== null ? html`<div class="feed-summary-preview" aria-hidden="true" inert style=${`transform:translateX(${this._swipeDirection * this._swipeWidth + this._swipeOffset}px)`}>${this._renderSummaryPage(this._swipeTarget)}</div>` : nothing}
       </div>
       <div class="feed-summary-tabs" role="tablist" aria-label="Overview" @keydown=${this._summaryKeydown}>
         ${indices.map((page, i) => {
-          const label = page === 0 ? "Monthly stats" : this._health && page === 1 ? "Movement" : this._health && page === 2 ? "Health" : `Goals · page ${page - this._goalStartPage + 1} of ${count - this._goalStartPage}`;
-          const panel = page === 0 ? "feed-panel-month" : this._health && page === 1 ? "feed-panel-movement" : this._health && page === 2 ? "feed-panel-health" : "feed-panel-goals";
+          const label = page === 0 ? "Monthly stats" : this._health && page === 1 ? "Movement" : this._health && page === 2 ? "Health" : page === this._racePage ? 'Races' : `Goals · page ${page - this._goalStartPage + 1} of ${count - this._goalStartPage}`;
+          const panel = page === 0 ? "feed-panel-month" : this._health && page === 1 ? "feed-panel-movement" : this._health && page === 2 ? "feed-panel-health" : page === this._racePage ? 'feed-panel-races' : "feed-panel-goals";
           return html`${i && page - indices[i - 1] > 1 ? html`<span class="feed-summary-ellipsis" aria-hidden="true">…</span>` : nothing}<button id=${"feed-tab-" + page} role="tab" aria-label=${label} title=${label} aria-selected=${this._summaryPage === page ? "true" : "false"} aria-controls=${panel} tabindex=${this._summaryPage === page ? "0" : "-1"} @click=${() => this._selectSummary(page)}></button>`;
         })}
       </div>

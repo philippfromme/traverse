@@ -8,6 +8,7 @@ import { XMLParser } from "fast-xml-parser";
 import FitParser from "fit-file-parser";
 import { registerGoals } from "./goals.js";
 import { registerHealth } from "./health.js";
+import { registerRaces } from "./races.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -206,6 +207,8 @@ registerGoals(app, {
   sourceUrl: process.env.GOALS_DEMO === "1" ? process.env.GOALS_SOURCE_URL || "" : "",
 });
 registerHealth(app, { dataDir: DATA_DIR });
+registerRaces(app, { dataDir: DATA_DIR, getActivities: () => activityIndex });
+app.get('/races', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'races.html')));
 
 app.use(
   "/fonts/geist-sans",

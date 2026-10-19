@@ -76,6 +76,22 @@ The page reads `DATA_DIR/wellness/YYYY-MM-DD.json` files produced by the `garmin
 
 Run the health API checks with `node --test viewer/health.test.js`.
 
+## Races
+
+Open `/races` to plan running races for any season. Add a name, date (or a tentative date window), and distance; optionally record a target time, registration status, location, organiser link and notes. Races can be edited, archived and restored. The optional **Berlin 2027 ideas** dialog previews six organiser-linked events before adding them; repeated imports preserve existing entries, including edited and archived ones.
+
+- Choose one upcoming race as your training target. The next race is shown independently, so a closer side event does not replace your main goal. Nearby races within 14 days are flagged for planning.
+- The season timeline uses the reference's 24-week preparation windows. Races over 10 km use 12/6/4/2 weeks for Base/Build/Race-specific/Taper; shorter races use 16/4/3/1. Tentative race windows remain labelled tentative.
+- Running statistics come from the current activity index, counting each running activity ID once. They use completed Monday–Sunday weeks in Europe/Berlin, include zero-run weeks, and exclude missing distances from kilometre totals. Refresh or refocus the Races page to load the latest index. The displayed latest activity date makes an old index visible.
+- Weekly suggestions distribute your selected volume over two to five days, defaulting to the last complete running week. Taper uses 65% of that volume. These are general planning suggestions without automatic mileage increases or pace predictions; no normal week is suggested on race day or for past targets.
+- Link an existing completed running activity to show its recorded result beside the plan. Race outcome is set explicitly. Missing activity links remain visible and can be repaired. Planning does not create or modify activities or contribute to Goals.
+- Calendar shows race markers separately from activities and lets you add a race from a selected day. Its year selector includes future race years; both race and activity dates use Europe/Berlin. The feed overview includes a Races page in the same set of swipeable dots.
+- **Export calendar** downloads the season as ICS with stable event IDs and tentative multi-day windows where needed. It does not synchronise with Garmin Connect or subscribe an external calendar.
+
+Races and planning settings are stored in `DATA_DIR/races.json` using serialised atomic writes. Include this file in data-volume backups. The existing Tailnet access boundary applies. No race data is populated until you add or import it.
+
+Run the race calculations, persistence, API and calendar-export checks with `node --test viewer/races.test.js`.
+
 ## Docker
 
 A Docker image is published to GitHub Container Registry when a version tag is pushed (e.g., `git tag v1.0.0 && git push --tags`).

@@ -57,16 +57,23 @@ class AppHeader extends LitElement {
             >Feed</a
           >
           <a
-            href="/activities"
-            class="header-link ${this.active === "activities" ? "active" : ""}"
-            @click=${this._closeMenu}
-            >Activities</a
-          >
-          <a
             href="/calendar"
             class="header-link ${this.active === "calendar" ? "active" : ""}"
             @click=${this._closeMenu}
             >Calendar</a
+          >
+          <a href="/races" class="header-link ${this.active === 'races' ? 'active' : ''}" @click=${this._closeMenu}>Races</a>
+          <a
+            href="/goals"
+            class="header-link ${this.active === "goals" ? "active" : ""}"
+            @click=${this._closeMenu}
+            >Goals</a
+          >
+          <a
+            href="/activities"
+            class="header-link ${this.active === "activities" ? "active" : ""}"
+            @click=${this._closeMenu}
+            >Activities</a
           >
           <a
             href="/heatmap"
@@ -85,12 +92,6 @@ class AppHeader extends LitElement {
             class="header-link ${this.active === "health" ? "active" : ""}"
             @click=${this._closeMenu}
             >Health</a
-          >
-          <a
-            href="/goals"
-            class="header-link ${this.active === "goals" ? "active" : ""}"
-            @click=${this._closeMenu}
-            >Goals</a
           >
           <a
             href="/upload"

@@ -866,7 +866,7 @@ feed-page {
 }
 
 .calendar-day-detail {
-  display: none;
+  display: block;
   border-top: 1px solid var(--border);
   padding: 16px 20px;
 }
@@ -1759,3 +1759,14 @@ heatmap-page {
   padding: 1rem;
   color: var(--text-secondary, #aaa);
 }
+
+/* Planned races stay distinct from recorded activities. */
+.calendar-race{display:block;border-left:2px solid var(--accent);padding:4px 6px;margin:5px 0;color:var(--accent);font-size:12px;line-height:1.35;text-decoration:none;overflow-wrap:anywhere}
+.calendar-race:hover{text-decoration:underline}
+.calendar-day-button{background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;min-width:28px;text-align:left}
+.calendar-day-button:focus-visible{outline:2px solid var(--accent)}
+.feed-race-name{font-size:1.5rem;overflow-wrap:anywhere;line-height:1.3;margin:20px 0}
+.feed-race-countdown{font:1.8rem 'Geist Pixel',sans-serif;color:inherit}
+.feed-race-focus{border-left:2px solid currentColor;padding-left:12px}
+#feed-panel-races a,#feed-panel-races h2,.feed-summary-preview .feed-race-name,.feed-summary-preview a{color:inherit}
+#feed-panel-races a{pointer-events:auto;text-underline-offset:4px}

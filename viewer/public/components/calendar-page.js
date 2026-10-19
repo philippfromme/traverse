@@ -2,6 +2,7 @@ import { LitElement, html, nothing } from "lit";
 
 import { formatType, formatDistance, formatDuration } from "./utils.js";
 import "./custom-select.js";
+import { berlinDay } from './race-utils.js';
 
 const MONTH_NAMES = [
   "January",
@@ -26,6 +27,8 @@ class CalendarPage extends LitElement {
     _year: { state: true },
     _month: { state: true },
     _selectedDay: { state: true },
+    _races: { state: true },
+    _raceError: { state: true },
   };
 
   createRenderRoot() {
@@ -35,9 +38,11 @@ class CalendarPage extends LitElement {
   constructor() {
     super();
     this._activities = [];
-    const now = new Date();
-    this._year = now.getFullYear();
-    this._month = now.getMonth();
+    this._races = [];
+    this._raceError = '';
+    const [year, month] = berlinDay(new Date()).split('-').map(Number);
+    this._year = year;
+    this._month = month - 1;
     this._selectedDay = null;
   }
 
@@ -47,10 +52,25 @@ class CalendarPage extends LitElement {
   }
 
   async _loadData() {
+    this._loadRaces();
     const res = await fetch("/api/activities");
     const data = await res.json();
     this._activities = data.activities;
     this._restoreFromURL();
+  }
+
+  async _loadRaces() {
+    try {
+      const response = await fetch('/api/races');
+      if (!response.ok) throw new Error('Could not load races.');
+      this._races = (await response.json()).races.filter(r => !r.archived && r.outcome !== 'cancelled');
+      this._raceError = '';
+    } catch { this._raceError = 'Races could not be loaded.'; }
+  }
+
+  _racesForDay(d) {
+    const day = `${d.year}-${String(d.month + 1).padStart(2, '0')}-${String(d.date).padStart(2, '0')}`;
+    return this._races.filter(r => r.startDate <= day && r.endDate >= day);
   }
 
   _restoreFromURL() {
@@ -94,9 +114,9 @@ class CalendarPage extends LitElement {
   }
 
   _today() {
-    const now = new Date();
-    this._year = now.getFullYear();
-    this._month = now.getMonth();
+    const [year, month] = berlinDay(new Date()).split('-').map(Number);
+    this._year = year;
+    this._month = month - 1;
     this._selectedDay = null;
     this._updateURL();
   }
@@ -107,9 +127,8 @@ class CalendarPage extends LitElement {
     this._updateURL();
   }
 
-  _selectDay(e, key, hasActivities) {
+  _selectDay(e, key) {
     if (e.target.closest("a")) return;
-    if (!hasActivities) return;
     this._selectedDay = this._selectedDay === key ? null : key;
   }
 
@@ -117,9 +136,11 @@ class CalendarPage extends LitElement {
     const years = new Set();
     for (const a of this._activities) {
       if (!a.time) continue;
-      years.add(new Date(a.time).getFullYear());
+      if (berlinDay(a.time)) years.add(Number(berlinDay(a.time).slice(0, 4)));
     }
-    years.add(new Date().getFullYear());
+    for (const r of this._races) for (let year = Number(r.startDate.slice(0, 4)); year <= Number(r.endDate.slice(0, 4)); year++) years.add(year);
+    years.add(Number(berlinDay(new Date()).slice(0, 4)));
+    years.add(this._year);
     return Array.from(years).sort((a, b) => a - b);
   }
 
@@ -127,8 +148,10 @@ class CalendarPage extends LitElement {
     const map = new Map();
     for (const a of this._activities) {
       if (!a.time) continue;
-      const d = new Date(a.time);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const day = berlinDay(a.time);
+      if (!day) continue;
+      const [year, month, date] = day.split('-').map(Number);
+      const key = `${year}-${month - 1}-${date}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(a);
     }
@@ -150,7 +173,7 @@ class CalendarPage extends LitElement {
     for (let i = startDow - 1; i >= 0; i--) {
       days.push({
         date: prevMonthLast.getDate() - i,
-        month: this._month - 1,
+        month: this._month === 0 ? 11 : this._month - 1,
         year: this._month === 0 ? this._year - 1 : this._year,
         outside: true,
       });
@@ -172,7 +195,7 @@ class CalendarPage extends LitElement {
       for (let d = 1; d <= remaining; d++) {
         days.push({
           date: d,
-          month: this._month + 1,
+          month: this._month === 11 ? 0 : this._month + 1,
           year: this._month === 11 ? this._year + 1 : this._year,
           outside: true,
         });
@@ -207,12 +230,12 @@ class CalendarPage extends LitElement {
     const byDate = this._getActivitiesByDate();
     const days = this._getCalendarDays();
     const weekSummaries = this._getWeekSummaries(days, byDate);
-    const today = new Date();
+    const [todayYear, todayMonth, todayDate] = berlinDay(new Date()).split('-').map(Number);
     const isToday = (d) =>
       !d.outside &&
-      d.date === today.getDate() &&
-      this._month === today.getMonth() &&
-      this._year === today.getFullYear();
+      d.date === todayDate &&
+      this._month === todayMonth - 1 &&
+      this._year === todayYear;
 
     return html`
       <div class="calendar-nav">
@@ -235,6 +258,7 @@ class CalendarPage extends LitElement {
         </button>
       </div>
 
+      ${this._raceError ? html`<p role="status">${this._raceError} <button class="page-btn" @click=${this._loadRaces}>Retry</button></p>` : nothing}
       <div class="calendar-grid">
         ${DAY_NAMES.map((d) => html`<div class="calendar-dow">${d}</div>`)}
         <div class="calendar-dow"></div>
@@ -249,9 +273,10 @@ class CalendarPage extends LitElement {
               class="calendar-cell ${d.outside ? "outside" : ""} ${isToday(d)
                 ? "today"
                 : ""} ${this._selectedDay === key ? "selected" : ""}"
-              @click=${(e) => this._selectDay(e, key, activities.length > 0)}
+              @click=${(e) => this._selectDay(e, key)}
             >
-              <div class="calendar-date">${d.date}</div>
+              <button class="calendar-date calendar-day-button" aria-label=${`Select ${d.year}-${d.month + 1}-${d.date}`}>${d.date}</button>
+              ${this._racesForDay(d).map(r => html`<a class="calendar-race" href=${`/races?year=${r.startDate.slice(0, 4)}&race=${r.id}`}>◆ ${r.name}${r.dateConfirmed ? '' : ' · tentative'}</a>`)}
               ${activities.map(
                 (a) => html`
                   <a
@@ -333,6 +358,8 @@ class CalendarPage extends LitElement {
                     <span class="material-symbols-outlined">close</span>
                   </button>
                 </div>
+                <a class="calendar-race" href=${`/races?year=${selYear}&add=1&date=${selYear}-${String(selMonth + 1).padStart(2, '0')}-${String(selDate).padStart(2, '0')}`}>+ Add race</a>
+                ${this._racesForDay({year:selYear,month:selMonth,date:selDate}).map(r => html`<a class="calendar-race" href=${`/races?year=${r.startDate.slice(0, 4)}&race=${r.id}`}>◆ ${r.name} · ${r.distanceMeters / 1000} km</a>`)}
                 ${selActivities.map(
                   (a) => html`
                     <a

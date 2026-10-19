@@ -1,0 +1,45 @@
+races-page{display:flex;flex-direction:column;gap:16px;padding:12px;flex:1;min-width:0;--race-muted:#b7b7b7}
+.race-heading,.race-toolbar,.race-actions,.race-card-meta,.race-dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.race-heading{padding:12px 0}.race-heading h1{font-size:2rem;margin:0 0 6px}.race-heading p{margin:0;color:var(--race-muted)}
+races-page button:not(.custom-select-trigger):not(.custom-select-option),races-page input,races-page textarea{font:14px Geist,sans-serif;color:var(--fg);background:var(--bg);border:1px solid var(--border);border-radius:0;padding:10px 12px;min-height:42px}races-page button:not(.custom-select-trigger):not(.custom-select-option){cursor:pointer}races-page button:not(.custom-select-trigger):not(.custom-select-option):hover{border-color:var(--fg)}races-page button.primary{background:var(--accent);color:#000;border-color:var(--accent)}races-page button:disabled{opacity:.5;cursor:wait}races-page :focus-visible{outline:2px solid var(--accent);outline-offset:3px}races-page a{color:inherit;text-underline-offset:4px}races-page h2{font-size:1.45rem;margin:0 0 16px}races-page h3{margin:16px 0 12px}races-page p{line-height:1.6}.race-muted{color:var(--race-muted);font-size:14px}.race-panel{background:var(--bg-elevated);padding:24px;min-width:0}.race-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.race-eyebrow{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--race-muted);margin-bottom:18px}.race-number{display:block;font:clamp(1.7rem,3vw,2.6rem)/1.3 'Geist Pixel',sans-serif;margin:10px 0;overflow-wrap:anywhere}.race-number small{font:14px Geist,sans-serif;color:var(--race-muted)}.race-spark{height:40px;display:flex;align-items:end;gap:8px}.race-spark>div{flex:1}.race-spark span{display:block;background:var(--accent)}.race-toolbar{justify-content:start}.race-toolbar label{display:flex;gap:8px;align-items:center}.race-toolbar>a{margin-left:auto}.race-checkbox{display:flex!important;align-items:center;gap:10px;flex-direction:row!important}.race-checkbox input{min-height:0;width:18px;height:18px;accent-color:var(--accent)}.race-training{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.race-session{display:grid;grid-template-columns:40px 1fr auto;gap:12px;padding:15px 0;border-bottom:1px solid var(--border);font-size:14px}.race-session>span:first-child{color:var(--race-muted)}.race-callout{border-left:2px solid var(--accent);padding-left:12px;font-size:14px}.race-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.race-card.chosen{box-shadow:inset 3px 0 var(--accent)}.race-card-meta{font-size:13px;color:var(--race-muted)}.race-card h3{font-size:1.3rem}.race-actions{justify-content:start;margin-top:16px;gap:8px}.race-actions a{font-size:14px;padding:8px}.race-title{font:inherit!important;padding:0!important;min-height:0!important;background:none!important;border:0!important;text-align:left;overflow-wrap:anywhere}.race-notes{white-space:pre-wrap;overflow-wrap:anywhere}
+
+.race-season{padding:20px}
+.race-season-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.race-season-heading h2{margin:0}
+.race-season-count{font-size:11px;line-height:20px;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);background:var(--m24-light-green);padding:0 12px;white-space:nowrap}
+.race-season-intro{margin:8px 0 0;font-size:13px}
+.race-timeline-scroll{overflow-x:auto;margin-top:20px;padding-bottom:4px}
+.race-timeline{min-width:1000px}
+.race-timeline-row{display:grid;grid-template-columns:220px minmax(0,1fr);align-items:center}
+.race-timeline-header>span{font-size:11px;text-transform:uppercase;color:var(--fg-dim)}
+.race-label{display:flex;align-items:center;gap:10px;width:100%;min-height:51px!important;padding:8px 12px 8px 0!important;text-align:left;background:none!important;border:0!important;color:var(--fg-muted)!important;line-height:1.35!important}
+.race-row-number{flex:none;width:20px;color:var(--fg-dim);font-size:11px}
+.race-row-name{font-size:13px;overflow-wrap:anywhere}
+.race-target-star{margin-left:auto;flex:none;font-size:12px}
+.is-selected .race-label,.race-label:hover{color:var(--accent)!important}
+.race-lane{position:relative;height:51px;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+.race-month-line{position:absolute;top:0;bottom:0;border-left:1px solid var(--border);pointer-events:none}
+.race-axis{height:32px;border-right:0}
+.race-axis>span{position:absolute;top:0;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-muted);white-space:nowrap}
+.race-phase{position:absolute;top:18px;height:13px;min-height:0!important;padding:0!important;border:0!important;opacity:.65}
+.is-selected .race-phase,.race-phase:hover,.race-phase:focus-visible{opacity:1}
+.race-phase:hover{outline:1px solid var(--fg)}
+.race-season .base{background:color-mix(in srgb,var(--accent) 20%,var(--bg-elevated))!important}
+.race-season .build{background:color-mix(in srgb,var(--accent) 45%,var(--bg-elevated))!important}
+.race-season .specific{background:color-mix(in srgb,var(--accent) 70%,var(--bg-elevated))!important}
+.race-season .taper{background:var(--accent)!important}
+.race-marker{position:absolute;top:18px;transform:translateX(-50%);width:13px;height:13px;min-height:0!important;background:var(--fg)!important;border:0!important;padding:0!important;z-index:1}
+.race-marker::before{content:'';position:absolute;inset:-8px -5px}
+.race-marker:hover{outline:1px solid var(--fg);outline-offset:3px}
+.race-marker-date{position:absolute;top:34px;transform:translateX(-50%);font-size:10px;line-height:1.2;color:var(--fg-muted);white-space:nowrap;pointer-events:none}
+.race-marker-date.near-edge{transform:translateX(-85%)}
+.race-today-line{position:absolute;top:0;bottom:0;border-left:1px dashed var(--fg-dim);pointer-events:none;z-index:1}
+.race-legend{display:flex;justify-content:flex-end;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--fg-muted);margin:18px 0 14px}
+.race-legend span{display:flex;align-items:center;gap:7px}
+.race-legend i{width:10px;height:10px;display:inline-block}
+.race-day-swatch{background:var(--fg)}
+.race-chart-note{font-size:12px;color:var(--fg-muted);border-top:1px solid var(--border);padding-top:12px;margin:0}
+@media(max-width:720px){.race-legend{justify-content:flex-start;gap:12px}.race-season-heading{align-items:start}.race-season-intro{max-width:40ch}}
+.race-dialog{background:var(--bg-elevated);color:var(--fg);border:1px solid var(--border);width:min(740px,calc(100vw - 32px));max-height:calc(100dvh - 40px);padding:24px;overflow:auto}.race-dialog::backdrop{background:#000a}.race-dialog-heading{margin-bottom:24px;flex-wrap:nowrap;align-items:start}.race-dialog-heading h2{margin:0}.race-dialog-heading button{min-width:42px;font-size:22px;padding:4px}.race-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.race-fields label{display:flex;flex-direction:column;gap:8px;font-size:13px}.race-fields .wide{grid-column:1/-1}.race-fields input,.race-fields select,.race-fields textarea{width:100%;box-sizing:border-box;min-width:0}.race-error{padding:16px;color:#ffb3b3;background:var(--bg-elevated);line-height:1.5}.race-footnote{margin:4px 8px}.race-dialog .race-card{padding:0;box-shadow:none}.race-dialog .race-fields input[type=checkbox]{width:18px}html:has(.race-dialog[open]),body:has(.race-dialog[open]){overflow:hidden}
+@media(max-width:850px){.race-stats{grid-template-columns:1fr}.race-training,.race-grid{grid-template-columns:1fr}.race-heading{align-items:start}.race-fields{grid-template-columns:1fr}.race-fields .wide{grid-column:auto}.race-panel{padding:20px}.race-dialog{padding:20px}.race-toolbar>a{margin-left:0}}
+
+.race-toolbar custom-select{display:block;min-width:100px}.race-fields custom-select{display:block;min-width:0;width:100%}.race-fields .custom-select-trigger{width:100%;min-width:0;min-height:42px}.race-fields .custom-select-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.race-fields .custom-select-dropdown{max-width:100%;min-width:100%}.race-fields .custom-select-option{white-space:normal;overflow-wrap:anywhere}
