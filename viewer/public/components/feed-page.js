@@ -11,6 +11,8 @@ import { paginateGoals } from "./feed-goals-pagination.js";
 import { swipeDirection, wheelSwipe } from "./feed-summary-gestures.js";
 
 const PAGE_SIZE = 20;
+const wellnessNumber = (value) => value == null ? "—" : Math.round(value).toLocaleString("en-GB");
+const wellnessDate = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 function getMonthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -80,6 +82,7 @@ class FeedPage extends LitElement {
     _monthStats: { state: true },
     _summaryPage: { state: true },
     _goals: { state: true },
+    _health: { state: true },
     _goalsError: { state: true },
     _goalPages: { state: true },
     _swipeOffset: { state: true },
@@ -100,6 +103,7 @@ class FeedPage extends LitElement {
     this._monthStats = null;
     this._summaryPage = 0;
     this._goals = null;
+    this._health = null;
     this._goalsError = false;
     this._goalPages = [];
     this._swipeOffset = 0;
@@ -152,9 +156,10 @@ class FeedPage extends LitElement {
     // A short overview also keeps the activity feed reachable on phones.
     const pages = paginateGoals(items, desktop ? container.clientHeight - 1 : 360, headings, categoryGap, rowGap);
     if (JSON.stringify(pages) !== JSON.stringify(this._goalPages)) {
-      const firstVisible = this._goalPages[this._summaryPage - 1]?.[0];
+      const goalIndex = this._summaryPage - this._goalStartPage;
+      const firstVisible = goalIndex >= 0 ? this._goalPages[goalIndex]?.[0] : null;
       this._goalPages = pages;
-      if (this._summaryPage > 0) this._summaryPage = 1 + Math.max(0, firstVisible ? pages.findIndex(page => page.includes(firstVisible)) : 0);
+      if (goalIndex >= 0) this._summaryPage = this._goalStartPage + Math.max(0, firstVisible ? pages.findIndex(page => page.includes(firstVisible)) : 0);
     }
   }
 
@@ -171,20 +176,24 @@ class FeedPage extends LitElement {
         this._goals = data;
         if (!data.goals.some(goal => !goal.archived && goal.progress.status !== 'ended')) {
           this._goalPages = [];
-          this._summaryPage = Math.min(this._summaryPage, 1);
+          this._summaryPage = Math.min(this._summaryPage, this._goalStartPage);
         }
       }
     } catch (error) {
       if (error.name !== "AbortError") {
         this._goalsError = true;
         this._goalPages = [];
-        this._summaryPage = Math.min(this._summaryPage, 1);
+        this._summaryPage = Math.min(this._summaryPage, this._goalStartPage);
       }
     }
   }
 
   get _summaryPageCount() {
-    return 1 + Math.max(1, this._goalPages.length);
+    return this._goalStartPage + Math.max(1, this._goalPages.length);
+  }
+
+  get _goalStartPage() {
+    return this._health ? 3 : 1;
   }
 
   _selectSummary(page) {
@@ -194,9 +203,9 @@ class FeedPage extends LitElement {
   }
 
   _commitSummary(page) {
-    const wasMonthly = this._summaryPage === 0;
+    const wasBeforeGoals = this._summaryPage < this._goalStartPage;
     this._summaryPage = Math.min(page, this._summaryPageCount - 1);
-    if (page > 0 && wasMonthly) this._loadGoals();
+    if (page >= this._goalStartPage && wasBeforeGoals) this._loadGoals();
   }
 
   _prepareSwipe(page, direction) {
@@ -307,7 +316,27 @@ class FeedPage extends LitElement {
     this._activities = sorted.slice(0, PAGE_SIZE);
     this._hasMore = sorted.length > PAGE_SIZE;
     this._monthStats = computeMonthStats(sorted);
+    await this._loadHealth();
     this._loading = false;
+  }
+
+  async _loadHealth() {
+    try {
+      const datesResponse = await fetch("/api/health/dates");
+      if (!datesResponse.ok) return;
+      const { dates } = await datesResponse.json();
+      if (!dates.length) return;
+      const latest = dates[0];
+      const [dayResponse, trendResponse] = await Promise.all([
+        fetch(`/api/health/day/${latest}`),
+        fetch(`/api/health/trends?days=7&end=${latest}`),
+      ]);
+      if (!dayResponse.ok || !trendResponse.ok) return;
+      const [day, trend] = await Promise.all([dayResponse.json(), trendResponse.json()]);
+      this._health = { day, days: trend.days };
+    } catch {
+      // The activity feed remains available when wellness data is unavailable.
+    }
   }
 
   _loadMore() {
@@ -391,12 +420,43 @@ class FeedPage extends LitElement {
     `;
   }
 
+  _renderMovementSummary() {
+    const { day, days } = this._health;
+    const recorded = days.filter((item) => item.steps != null);
+    const withGoal = recorded.filter((item) => item.stepGoal > 0);
+    const hits = withGoal.filter((item) => item.steps >= item.stepGoal).length;
+    const average = recorded.length ? recorded.reduce((sum, item) => sum + item.steps, 0) / recorded.length : null;
+    return html`<div class="feed-summary-title">Movement · 7 days</div>
+      <div class="feed-summary-grid">
+        <div class="feed-summary-item"><div class="feed-summary-value">${wellnessNumber(average)}</div><div class="feed-summary-label">Average steps / day</div><div class="feed-summary-trend">${recorded.length} of 7 days recorded</div></div>
+        <div class="feed-summary-item"><div class="feed-summary-value">${withGoal.length ? `${hits} / ${withGoal.length}` : "—"}</div><div class="feed-summary-label">Step goals reached</div><div class="feed-summary-trend">Days with a saved goal</div></div>
+        <div class="feed-summary-item"><div class="feed-summary-value">${wellnessNumber(day.steps)}</div><div class="feed-summary-label">Latest steps</div><div class="feed-summary-trend">${wellnessDate(day.date)}</div></div>
+      </div>`;
+  }
+
+  _renderRecoverySummary() {
+    const { day } = this._health;
+    return html`<div class="feed-summary-title">Health · ${wellnessDate(day.date)}</div>
+      <div class="feed-summary-grid">
+        <div class="feed-summary-item"><div class="feed-summary-value">${wellnessNumber(day.bodyBattery)}</div><div class="feed-summary-label">Body Battery / 100</div><div class="feed-summary-trend">Latest daily value</div></div>
+        <div class="feed-summary-item"><div class="feed-summary-value">${wellnessNumber(day.restingHeartRate)}</div><div class="feed-summary-label">Resting heart rate · bpm</div><div class="feed-summary-trend">Daily resting value</div></div>
+        <div class="feed-summary-item"><div class="feed-summary-value">${wellnessNumber(day.averageStress)}</div><div class="feed-summary-label">Average stress / 100</div><div class="feed-summary-trend">${day.averageStress == null ? "No reading recorded" : "Daily average"}</div></div>
+      </div>`;
+  }
+
+  _renderSummaryPage(page, measure = false) {
+    if (page === 0) return this._renderMonthSummary();
+    if (this._health && page === 1) return this._renderMovementSummary();
+    if (this._health && page === 2) return this._renderRecoverySummary();
+    return this._renderGoalsSummary(page, measure);
+  }
+
   _renderGoalsSummary(page = this._summaryPage, measure = true) {
     if (this._goalsError) return html`<div class="feed-goals-empty" role="status"><p>Could not load your goals.</p><button class="feed-summary-retry" @click=${this._loadGoals}>Try again</button></div>`;
     if (!this._goals) return html`<p role="status">Loading goals…</p>`;
     const goals = this._goals.goals.filter(goal => !goal.archived && goal.progress.status !== "ended");
     if (!goals.length) return html`<div class="feed-goals-empty"><div class="feed-summary-title">What’s next?</div><p>Set a target for your training, a benchmark or a skill you want to learn.</p></div>`;
-    const visibleIds = this._goalPages[Math.max(0, page - 1)];
+    const visibleIds = this._goalPages[Math.max(0, page - this._goalStartPage)];
     const visible = visibleIds ? goals.filter(goal => visibleIds.includes(goal.id)) : goals.slice(0, 1);
     return html`
       <div class="feed-goals-heading"><div class="feed-summary-title">Your goals</div><span>${goals.length} ${goals.length === 1 ? "goal" : "goals"}</span></div>
@@ -430,14 +490,16 @@ class FeedPage extends LitElement {
       <div class="feed-summary-viewport">
         <div class="feed-summary-content" style=${`transform:translateX(${this._swipeOffset}px)`}>
           <div id="feed-panel-month" class="feed-summary-panel" role="tabpanel" aria-labelledby="feed-tab-0" tabindex="0" ?hidden=${this._summaryPage !== 0}>${this._renderMonthSummary()}</div>
-          <div id="feed-panel-goals" class=${"feed-summary-panel" + (this._summaryPage === 0 ? " inactive" : "")} role="tabpanel" aria-labelledby=${"feed-tab-" + Math.max(1, this._summaryPage)} aria-hidden=${this._summaryPage === 0 ? "true" : "false"} ?inert=${this._summaryPage === 0} tabindex="0">${this._renderGoalsSummary()}</div>
+          ${this._health ? html`<div id="feed-panel-movement" class="feed-summary-panel" role="tabpanel" aria-labelledby="feed-tab-1" tabindex="0" ?hidden=${this._summaryPage !== 1}>${this._renderMovementSummary()}</div><div id="feed-panel-health" class="feed-summary-panel" role="tabpanel" aria-labelledby="feed-tab-2" tabindex="0" ?hidden=${this._summaryPage !== 2}>${this._renderRecoverySummary()}</div>` : nothing}
+          <div id="feed-panel-goals" class=${"feed-summary-panel" + (this._summaryPage < this._goalStartPage ? " inactive" : "")} role="tabpanel" aria-labelledby=${"feed-tab-" + Math.max(this._goalStartPage, this._summaryPage)} aria-hidden=${this._summaryPage < this._goalStartPage ? "true" : "false"} ?inert=${this._summaryPage < this._goalStartPage} tabindex="0">${this._renderGoalsSummary()}</div>
         </div>
-        ${this._swipeTarget !== null ? html`<div class="feed-summary-preview" aria-hidden="true" inert style=${`transform:translateX(${this._swipeDirection * this._swipeWidth + this._swipeOffset}px)`}>${this._swipeTarget === 0 ? this._renderMonthSummary() : this._renderGoalsSummary(this._swipeTarget, false)}</div>` : nothing}
+        ${this._swipeTarget !== null ? html`<div class="feed-summary-preview" aria-hidden="true" inert style=${`transform:translateX(${this._swipeDirection * this._swipeWidth + this._swipeOffset}px)`}>${this._renderSummaryPage(this._swipeTarget)}</div>` : nothing}
       </div>
-      <div class="feed-summary-tabs" role="tablist" aria-label="Training overview" @keydown=${this._summaryKeydown}>
+      <div class="feed-summary-tabs" role="tablist" aria-label="Overview" @keydown=${this._summaryKeydown}>
         ${indices.map((page, i) => {
-          const label = page === 0 ? "Monthly stats" : `Goals · page ${page} of ${count - 1}`;
-          return html`${i && page - indices[i - 1] > 1 ? html`<span class="feed-summary-ellipsis" aria-hidden="true">…</span>` : nothing}<button id=${"feed-tab-" + page} role="tab" aria-label=${label} title=${label} aria-selected=${this._summaryPage === page ? "true" : "false"} aria-controls=${page === 0 ? "feed-panel-month" : "feed-panel-goals"} tabindex=${this._summaryPage === page ? "0" : "-1"} @click=${() => this._selectSummary(page)}></button>`;
+          const label = page === 0 ? "Monthly stats" : this._health && page === 1 ? "Movement" : this._health && page === 2 ? "Health" : `Goals · page ${page - this._goalStartPage + 1} of ${count - this._goalStartPage}`;
+          const panel = page === 0 ? "feed-panel-month" : this._health && page === 1 ? "feed-panel-movement" : this._health && page === 2 ? "feed-panel-health" : "feed-panel-goals";
+          return html`${i && page - indices[i - 1] > 1 ? html`<span class="feed-summary-ellipsis" aria-hidden="true">…</span>` : nothing}<button id=${"feed-tab-" + page} role="tab" aria-label=${label} title=${label} aria-selected=${this._summaryPage === page ? "true" : "false"} aria-controls=${panel} tabindex=${this._summaryPage === page ? "0" : "-1"} @click=${() => this._selectSummary(page)}></button>`;
         })}
       </div>
     </div>`;
