@@ -18,6 +18,8 @@ const TCX_DIR = path.join(DATA_DIR, "tcx");
 const PUBLIC_DIR = path.join(__dirname, "public");
 const INDEX_FILE = path.join(CACHE_DIR, "activity-index.json");
 const HEATMAP_FILE = path.join(CACHE_DIR, "heatmap-data.json");
+const TRACK_ROOT = path.join(CACHE_DIR, "track-tiles");
+const TRACK_MANIFEST_FILE = path.join(TRACK_ROOT, "manifest.json");
 const PORT = Number(process.env.PORT || 3000);
 
 console.log(`[config] DATA_DIR=${DATA_DIR}`);
@@ -128,6 +130,17 @@ function buildIndex() {
   });
 }
 
+function buildTracks() {
+  return new Promise((resolve, reject) => {
+    execFile(process.execPath, [path.resolve("scripts/build-tracks.js")],
+      { env: { ...process.env, DATA_DIR, CACHE_DIR } }, (err, stdout, stderr) => {
+        if (stdout) process.stdout.write(stdout);
+        if (stderr) process.stderr.write(stderr);
+        err ? reject(err) : resolve();
+      });
+  });
+}
+
 function loadIndex() {
   const activities = JSON.parse(fs.readFileSync(INDEX_FILE, "utf-8"));
   console.log(`Loaded ${activities.length} activities from index.`);
@@ -141,6 +154,12 @@ if (!fs.existsSync(INDEX_FILE) || !fs.existsSync(HEATMAP_FILE)) {
     console.error("Failed to build index on startup:", err.message);
     process.exit(1);
   }
+}
+
+try {
+  await buildTracks();
+} catch (err) {
+  console.error("Failed to build track tiles on startup:", err.message);
 }
 
 let activityIndex = loadIndex();
@@ -367,6 +386,12 @@ function loadHeatmapData() {
 }
 
 let heatmapData = loadHeatmapData();
+let trackManifest = null;
+function loadTrackManifest() {
+  try { trackManifest = JSON.parse(fs.readFileSync(TRACK_MANIFEST_FILE, "utf8")); }
+  catch { trackManifest = null; }
+}
+loadTrackManifest();
 
 // watch data files for changes and reload
 function reloadData() {
@@ -381,6 +406,7 @@ function reloadData() {
     if (fs.existsSync(HEATMAP_FILE)) {
       heatmapData = loadHeatmapData();
     }
+    loadTrackManifest();
   } catch (err) {
     console.error("Failed to reload data:", err.message);
   }
@@ -392,7 +418,7 @@ function scheduleReload() {
   reloadTimer = setTimeout(reloadData, 500);
 }
 
-for (const file of [INDEX_FILE, HEATMAP_FILE]) {
+for (const file of [INDEX_FILE, HEATMAP_FILE, TRACK_MANIFEST_FILE]) {
   if (fs.existsSync(file)) {
     fs.watch(file, () => scheduleReload());
   }
@@ -417,6 +443,38 @@ app.get("/api/heatmap", (req, res) => {
     types: activityTypes,
   });
 });
+
+app.get("/api/tracks", (req, res) => {
+  if (!trackManifest) return res.status(503).json({ error: "Track tiles are not ready" });
+  const { signatures, ...publicManifest } = trackManifest;
+  res.json(publicManifest);
+});
+
+function sendTrackTile(req, res, kind) {
+  if (!trackManifest) return res.sendStatus(503);
+  const z = Number(req.params.z), x = Number(req.params.x), y = Number(req.params.y);
+  const maxZoom = kind === "raster" ? trackManifest.rasterMaxZoom : trackManifest.vectorMaxZoom;
+  if (![z, x, y].every(Number.isInteger) || z < 0 || z > maxZoom ||
+      (kind === "vector" && z <= trackManifest.rasterMaxZoom) ||
+      x < 0 || y < 0 || x >= 2 ** z || y >= 2 ** z) return res.sendStatus(400);
+  let group = "";
+  if (kind === "raster") {
+    const type = req.query.type;
+    if (type && !trackManifest.types.includes(type)) return res.sendStatus(404);
+    group = type ? Buffer.from(type).toString("base64url") : "all";
+  }
+  const file = kind === "raster"
+    ? path.join(TRACK_ROOT, trackManifest.version, "raster", group, `${z}`, `${x}`, `${y}.png`)
+    : path.join(TRACK_ROOT, trackManifest.version, "vector", `${z}`, `${x}`, `${y}.pbf.gz`);
+  if (!fs.existsSync(file)) return res.status(204).end();
+  res.set("Cache-Control", "public, max-age=3600");
+  if (kind === "vector") res.set("Content-Encoding", "gzip");
+  res.type(kind === "raster" ? "png" : "application/x-protobuf");
+  res.sendFile(file);
+}
+
+app.get("/api/tracks/raster/:z/:x/:y.png", (req, res) => sendTrackTile(req, res, "raster"));
+app.get("/api/tracks/vector/:z/:x/:y.pbf", (req, res) => sendTrackTile(req, res, "vector"));
 
 // SPA fallback: serve index.html for /activity/:id routes
 app.get("/activity/:id", (req, res) => {

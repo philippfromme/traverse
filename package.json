@@ -20,12 +20,15 @@
   "license": "MIT",
   "description": "A self-hosted viewer for TCX and GPX files with a heatmap of all activities.",
   "dependencies": {
+    "@maplibre/vt-pbf": "^4.3.2",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.5.9",
     "fit-file-parser": "^3.0.1",
     "geist": "^1.7.1",
-    "material-symbols": "^0.44.4"
+    "geojson-vt": "^5.0.4",
+    "material-symbols": "^0.44.4",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "open": "^11.0.0",

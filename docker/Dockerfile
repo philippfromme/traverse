@@ -7,6 +7,7 @@ RUN npm ci --omit=dev
 
 COPY viewer/ viewer/
 COPY scripts/build-index.js scripts/build-index.js
+COPY scripts/build-tracks.js scripts/build-tracks.js
 
 ENV DATA_DIR=/app/data
 ENV CACHE_DIR=/app/cache

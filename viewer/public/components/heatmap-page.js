@@ -8,6 +8,7 @@ class HeatmapPage extends LitElement {
   static properties = {
     _types: { state: true },
     _selectedType: { state: true },
+    _mode: { state: true },
   };
 
   createRenderRoot() {
@@ -18,6 +19,7 @@ class HeatmapPage extends LitElement {
     super();
     this._types = [];
     this._selectedType = "";
+    this._mode = new URLSearchParams(location.search).get("view") === "tracks" ? "tracks" : "heatmap";
   }
 
   connectedCallback() {
@@ -34,13 +36,34 @@ class HeatmapPage extends LitElement {
 
   _onTypeChange(e) {
     this._selectedType = e.target.value;
-    this.renderRoot.querySelector("heatmap-map").reload(this._selectedType);
+    this.renderRoot.querySelector("heatmap-map").reload(this._selectedType, this._mode);
+  }
+
+  _onModeChange(e) {
+    const mode = e.target.value;
+    if (mode === this._mode) return;
+    this._mode = mode;
+    const url = new URL(location.href);
+    if (mode === "tracks") url.searchParams.set("view", "tracks");
+    else url.searchParams.delete("view");
+    history.replaceState(null, "", url);
+    this.renderRoot.querySelector("heatmap-map").reload(this._selectedType, mode);
   }
 
   render() {
     return html`
       <div class="heatmap-controls">
         <custom-select
+          aria-label="Map view"
+          .value=${this._mode}
+          @change=${this._onModeChange}
+          .items=${[
+            { value: "heatmap", label: "Heatmap" },
+            { value: "tracks", label: "Tracks" },
+          ]}
+        ></custom-select>
+        <custom-select
+          aria-label="Activity type"
           .value=${this._selectedType}
           @change=${this._onTypeChange}
           .items=${[

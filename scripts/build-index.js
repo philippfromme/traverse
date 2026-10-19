@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { XMLParser } from "fast-xml-parser";
 import FitParser from "fit-file-parser";
+import { buildTrackTiles } from "./build-tracks.js";
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || "./data");
 const CACHE_DIR = path.resolve(process.env.CACHE_DIR || "./cache");
@@ -391,7 +392,7 @@ async function main() {
   if (!forceRebuild && fs.existsSync(INDEX_FILE)) {
     try {
       const existing = JSON.parse(fs.readFileSync(INDEX_FILE, "utf-8"));
-      for (const a of existing) existingIndex[a.id] = a;
+      for (const a of existing) existingIndex[`${a.source}:${a.id}`] = a;
     } catch {
       // ignore corrupt index
     }
@@ -402,19 +403,19 @@ async function main() {
   //    Stale entries (file deleted) are excluded — activities is built fresh from current files.
   const newFitStems = [], unchangedFitStems = [];
   for (const stem of fitStems) {
-    if (existingIndex[stem]?.source === "fit") unchangedFitStems.push(stem);
+    if (existingIndex[`fit:${stem}`]) unchangedFitStems.push(stem);
     else newFitStems.push(stem);
   }
 
   const newTcxStems = [], unchangedTcxStems = [];
   for (const stem of tcxStems) {
-    if (existingIndex[stem]?.source === "tcx") unchangedTcxStems.push(stem);
+    if (existingIndex[`tcx:${stem}`]) unchangedTcxStems.push(stem);
     else newTcxStems.push(stem);
   }
 
   const newGpxStems = [], unchangedGpxStems = [];
   for (const stem of gpxStems) {
-    if (existingIndex[stem]?.source === "gpx") unchangedGpxStems.push(stem);
+    if (existingIndex[`gpx:${stem}`]) unchangedGpxStems.push(stem);
     else newGpxStems.push(stem);
   }
 
@@ -458,8 +459,8 @@ async function main() {
   // 5. Heatmap
   const newActivityCount = newFitStems.length + newTcxStems.length + newGpxStems.length;
   const heatmapExists = fs.existsSync(HEATMAP_FILE);
-  const needsHeatmapRebuild = !heatmapExists;
-  const needsHeatmapAppend = heatmapExists && newActivityCount > 0;
+  const needsHeatmapRebuild = forceRebuild || !heatmapExists;
+  const needsHeatmapAppend = !needsHeatmapRebuild && newActivityCount > 0;
 
   function addToHeatmap(heatmapByType, trackpoints, type) {
     if (!trackpoints || trackpoints.length === 0) return 0;
@@ -538,9 +539,9 @@ async function main() {
   const activities = [];
 
   // Unchanged activities — copy from index as-is
-  for (const stem of [...unchangedFitStems, ...unchangedTcxStems, ...unchangedGpxStems]) {
-    activities.push({ ...existingIndex[stem] });
-  }
+  for (const stem of unchangedFitStems) activities.push({ ...existingIndex[`fit:${stem}`] });
+  for (const stem of unchangedTcxStems) activities.push({ ...existingIndex[`tcx:${stem}`] });
+  for (const stem of unchangedGpxStems) activities.push({ ...existingIndex[`gpx:${stem}`] });
 
   // New FIT activities
   for (const [stem, d] of fitDataMap) {
@@ -566,7 +567,7 @@ async function main() {
       calories: d.calories,
       startLat: d.startLat,
       startLon: d.startLon,
-      location: existingIndex[stem]?.location ?? null,
+      location: existingIndex[`fit:${stem}`]?.location ?? null,
     });
   }
 
@@ -592,7 +593,7 @@ async function main() {
       calories: d.calories,
       startLat: d.startLat,
       startLon: d.startLon,
-      location: existingIndex[stem]?.location ?? null,
+      location: existingIndex[`tcx:${stem}`]?.location ?? null,
     });
   }
 
@@ -618,7 +619,7 @@ async function main() {
       calories: null,
       startLat: d.startLat,
       startLon: d.startLon,
-      location: existingIndex[stem]?.location ?? null,
+      location: existingIndex[`gpx:${stem}`]?.location ?? null,
     });
   }
 
@@ -673,6 +674,8 @@ async function main() {
   });
 
   fs.writeFileSync(INDEX_FILE, JSON.stringify(activities, null, 2));
+
+  await buildTrackTiles({ force: forceRebuild });
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(`Indexed ${activities.length} activities in ${elapsed}s → ${INDEX_FILE}`);

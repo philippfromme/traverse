@@ -25,10 +25,12 @@ Builds generated artifacts:
 
 - `activity-index.json` (activity index for the viewer)
 - `heatmap-data.json` (precomputed heatmap points by activity type)
+- `track-tiles/` (pre-rendered overview tiles and vector route tiles)
 
 During indexing:
 
 - FIT, GPX, and TCX files are used for route/track points and heatmap generation.
+- The Heatmap page has a Tracks view. It draws every GPS route using cached map tiles; short routes are retained in the overview tiles. The activity-type filter works in both views.
 - Duration/HR/calories are taken from FIT, GPX, or TCX data.
 
 Activity locations are reverse geocoded via OpenStreetMap Nominatim. Results are cached, so only new activities get geocoded on subsequent runs.
@@ -88,9 +90,10 @@ Your data directory should contain:
   tcx/                  TCX files
   activity-index.json   Generated on first start (persisted automatically)
   heatmap-data.json     Generated on first start (persisted automatically)
+  track-tiles/          Generated on first start (persisted automatically)
 ```
 
-The server builds `activity-index.json` and `heatmap-data.json` automatically on first start if they don't exist. On subsequent starts, only new activities are processed.
+The server builds `activity-index.json`, `heatmap-data.json`, and track tiles automatically on first start if they don't exist. On subsequent starts, only new activity files are parsed; track tiles are rebuilt from cached route geometry when activities change.
 
 Drop new FIT, GPX, or TCX files into the mounted data directories and the index rebuilds automatically within a few seconds — no restart needed.
 
