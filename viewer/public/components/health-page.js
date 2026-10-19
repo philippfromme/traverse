@@ -72,7 +72,8 @@ class HealthPage extends LitElement {
   }
 
   _onDocumentClick(event) {
-    if (this._pickerOpen && !this.querySelector(".health-date-picker")?.contains(event.target)) this._pickerOpen = false;
+    const picker = this.querySelector(".health-date-picker");
+    if (this._pickerOpen && picker && !event.composedPath().includes(picker)) this._pickerOpen = false;
   }
 
   _onDocumentKeydown(event) {
