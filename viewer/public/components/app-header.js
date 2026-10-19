@@ -1,4 +1,5 @@
 import { LitElement, html } from "lit";
+import "./map-style-select.js";
 
 class AppHeader extends LitElement {
   static properties = {
@@ -23,19 +24,31 @@ class AppHeader extends LitElement {
     this._menuOpen = false;
   }
 
+  async _openSettings() {
+    this._settingsReturnFocus = document.activeElement;
+    this._menuOpen = false;
+    await this.updateComplete;
+    this.querySelector(".settings-dialog").showModal();
+  }
+
+  _closeSettings() {
+    this.querySelector(".settings-dialog").close();
+  }
+
+  _settingsClosed() {
+    if (this._settingsReturnFocus?.isConnected) this._settingsReturnFocus.focus();
+  }
+
+  _settingsBackdropClick(e) {
+    if (e.target === e.currentTarget) this._closeSettings();
+  }
+
   render() {
     return html`
       <div class="site-header">
         <h1>
           <a href="/"><img class="header-logo" src="/logo.svg" alt="">Traverse</a>
         </h1>
-        <button
-          class="header-hamburger"
-          @click=${this._toggleMenu}
-          aria-label="Toggle menu"
-        >
-          <span class="material-symbols-outlined">${this._menuOpen ? "close" : "menu"}</span>
-        </button>
         <nav class="header-nav ${this._menuOpen ? "open" : ""}">
           <a
             href="/"
@@ -80,7 +93,30 @@ class AppHeader extends LitElement {
             >Upload</a
           >
         </nav>
+        <div class="header-actions">
+          <button class="header-settings" type="button" aria-label="Settings" title="Settings" @click=${this._openSettings}>
+            <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+          </button>
+          <button
+            class="header-hamburger"
+            type="button"
+            @click=${this._toggleMenu}
+            aria-label="Toggle menu"
+          >
+            <span class="material-symbols-outlined">${this._menuOpen ? "close" : "menu"}</span>
+          </button>
+        </div>
       </div>
+      <dialog class="settings-dialog" aria-labelledby="settings-title" @close=${this._settingsClosed} @click=${this._settingsBackdropClick}>
+        <div class="settings-dialog-header">
+          <h2 id="settings-title">Settings</h2>
+          <button type="button" aria-label="Close settings" @click=${this._closeSettings}>×</button>
+        </div>
+        <div class="settings-field">
+          <span>Map style</span>
+          <map-style-select></map-style-select>
+        </div>
+      </dialog>
     `;
   }
 }

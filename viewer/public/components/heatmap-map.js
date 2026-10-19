@@ -1,4 +1,4 @@
-import { getMapStyle } from "./map-style.js";
+import { getMapStyle, MAP_STYLE_CHANGE_EVENT } from "./map-style.js";
 
 const HEATMAP_COLOR_RAMP = [
   "interpolate",
@@ -46,10 +46,15 @@ class HeatmapMap extends HTMLElement {
     this._map = null;
     this._requestId = 0;
     this.style.display = "block";
+    this._onStyleChange = () => {
+      if (this._data) this._render(this._data, this._type, this._mode);
+    };
+    window.addEventListener(MAP_STYLE_CHANGE_EVENT, this._onStyleChange);
     this.reload("", new URLSearchParams(location.search).get("view") === "tracks" ? "tracks" : "heatmap");
   }
 
   disconnectedCallback() {
+    window.removeEventListener(MAP_STYLE_CHANGE_EVENT, this._onStyleChange);
     if (this._map) {
       this._map.remove();
       this._map = null;
@@ -82,9 +87,14 @@ class HeatmapMap extends HTMLElement {
   }
 
   _render(data, type, mode) {
+    this._data = data;
+    this._type = type;
+    this._mode = mode;
     const camera = this._map ? {
       center: this._map.getCenter(),
       zoom: this._map.getZoom(),
+      pitch: this._map.getPitch(),
+      bearing: this._map.getBearing(),
     } : null;
     if (this._map) {
       this._map.remove();

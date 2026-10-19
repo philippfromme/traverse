@@ -1,4 +1,4 @@
-import { getMapStyle } from "./map-style.js";
+import { getMapStyle, MAP_STYLE_CHANGE_EVENT } from "./map-style.js";
 import { cssVar } from "./utils.js";
 
 class FeedMap extends HTMLElement {
@@ -10,6 +10,13 @@ class FeedMap extends HTMLElement {
     this._map = null;
     this._coords = null;
     this.style.display = "block";
+    this._onStyleChange = () => {
+      if (!this._map) return;
+      this._map.remove();
+      this._map = null;
+      if (this._coords) this._render(this._coords);
+    };
+    window.addEventListener(MAP_STYLE_CHANGE_EVENT, this._onStyleChange);
 
     this._observer = new IntersectionObserver(
       (entries) => {
@@ -32,6 +39,7 @@ class FeedMap extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.removeEventListener(MAP_STYLE_CHANGE_EVENT, this._onStyleChange);
     if (this._observer) {
       this._observer.disconnect();
       this._observer = null;

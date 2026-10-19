@@ -156,6 +156,94 @@ feed-page {
   min-width: 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.header-settings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.header-settings:hover {
+  color: var(--fg);
+}
+
+.header-settings .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.settings-dialog {
+  width: min(360px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.settings-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.settings-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.settings-dialog-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.settings-dialog-header button {
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.settings-dialog-header button:hover {
+  color: var(--fg);
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+
+.settings-field map-style-select,
+.settings-field .custom-select-trigger {
+  width: 100%;
+}
+
+.settings-field .custom-select-trigger {
+  border: 1px solid var(--border);
+}
+
+.settings-dialog .custom-select-dropdown {
+  position: static;
+}
+
 .header-hamburger {
   display: none;
   background: none;

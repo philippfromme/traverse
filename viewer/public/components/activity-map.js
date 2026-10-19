@@ -1,10 +1,12 @@
-import { getMapStyle } from "./map-style.js";
+import { getMapStyle, MAP_STYLE_CHANGE_EVENT } from "./map-style.js";
 import { cssVar } from "./utils.js";
 
 class ActivityMap extends HTMLElement {
   connectedCallback() {
     this._map = null;
     this.style.display = "block";
+    this._onStyleChange = () => this._render();
+    window.addEventListener(MAP_STYLE_CHANGE_EVENT, this._onStyleChange);
 
     if (this._trackpoints) {
       this._render();
@@ -12,6 +14,7 @@ class ActivityMap extends HTMLElement {
   }
 
   disconnectedCallback() {
+    window.removeEventListener(MAP_STYLE_CHANGE_EVENT, this._onStyleChange);
     if (this._map) {
       this._map.remove();
       this._map = null;
@@ -31,6 +34,12 @@ class ActivityMap extends HTMLElement {
 
     if (!trackpoints || trackpoints.length === 0) return;
 
+    const camera = this._map ? {
+      center: this._map.getCenter(),
+      zoom: this._map.getZoom(),
+      pitch: this._map.getPitch(),
+      bearing: this._map.getBearing(),
+    } : null;
     if (this._map) {
       this._map.remove();
     }
@@ -51,12 +60,14 @@ class ActivityMap extends HTMLElement {
     const map = new maplibregl.Map({
       container: this,
       style: getMapStyle(),
-      bounds: [
-        [minLng, minLat],
-        [maxLng, maxLat],
-      ],
-      fitBoundsOptions: { padding: 30 },
-      pitch: 45,
+      ...(camera || {
+        bounds: [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        fitBoundsOptions: { padding: 30 },
+        pitch: 45,
+      }),
       maxPitch: 85,
       cooperativeGestures: true,
     });

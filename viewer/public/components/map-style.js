@@ -1,5 +1,32 @@
 let _demSource = null;
 
+const MAP_STYLE_KEY = "traverse-map-style";
+export const MAP_STYLE_CHANGE_EVENT = "traverse-map-style-change";
+let fallbackStyle = "dark";
+
+export function getMapStylePreference() {
+  try {
+    const savedStyle = localStorage.getItem(MAP_STYLE_KEY);
+    return savedStyle === "streets" || savedStyle === "dark"
+      ? savedStyle
+      : fallbackStyle;
+  } catch {
+    return fallbackStyle;
+  }
+}
+
+export function setMapStylePreference(value) {
+  const style = value === "streets" ? "streets" : "dark";
+  if (style === getMapStylePreference()) return;
+  fallbackStyle = style;
+  try {
+    localStorage.setItem(MAP_STYLE_KEY, style);
+  } catch {
+    // The current page can still change its maps when storage is unavailable.
+  }
+  window.dispatchEvent(new CustomEvent(MAP_STYLE_CHANGE_EVENT, { detail: style }));
+}
+
 export function getDemSource() {
   if (!_demSource) {
     _demSource = new mlcontour.DemSource({
@@ -14,6 +41,10 @@ export function getDemSource() {
 }
 
 export function getMapStyle({ contours = true, terrain = true } = {}) {
+  if (getMapStylePreference() === "streets") {
+    return "https://tiles.openfreemap.org/styles/liberty";
+  }
+
   const demSource = getDemSource();
 
   const sources = {
