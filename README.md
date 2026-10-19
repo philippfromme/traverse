@@ -68,6 +68,14 @@ Set `TRAVERSE_DEMO_DIR` to an absolute scratch directory and run `node scripts/d
 
 Run the goal calculation, persistence, overview pagination and gesture checks with `node --test viewer/goals.test.js viewer/feed-goals-pagination.test.js viewer/feed-summary-gestures.test.js`.
 
+## Health
+
+Open `/health` for a daily Garmin wellness overview and 7-, 30-, 90-, 180-, or 365-day trends. Click the displayed date to choose any saved day from a calendar, use the date arrows, or select a trend bar. Longer ranges group readings into weekly or monthly daily averages. Missing measurements appear as a dash; a missing day is not counted as zero.
+
+The page reads `DATA_DIR/wellness/YYYY-MM-DD.json` files produced by the `garmin-download` project. Put that project's `data/wellness` directory in Traverse's data volume (the supplied Docker configurations mount the same directory). No index rebuild is needed when new wellness files arrive. The `/health` JSON liveness response remains available to clients that do not request HTML.
+
+Run the health API checks with `node --test viewer/health.test.js`.
+
 ## Docker
 
 A Docker image is published to GitHub Container Registry when a version tag is pushed (e.g., `git tag v1.0.0 && git push --tags`).
@@ -88,6 +96,7 @@ Your data directory should contain:
   fit/                  FIT files
   gpx/                  GPX files
   tcx/                  TCX files
+  wellness/             Daily Garmin wellness JSON files
   activity-index.json   Generated on first start (persisted automatically)
   heatmap-data.json     Generated on first start (persisted automatically)
   track-tiles/          Generated on first start (persisted automatically)

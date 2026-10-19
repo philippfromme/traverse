@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { XMLParser } from "fast-xml-parser";
 import FitParser from "fit-file-parser";
 import { registerGoals } from "./goals.js";
+import { registerHealth } from "./health.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -204,6 +205,7 @@ registerGoals(app, {
   demo: process.env.GOALS_DEMO === "1",
   sourceUrl: process.env.GOALS_DEMO === "1" ? process.env.GOALS_SOURCE_URL || "" : "",
 });
+registerHealth(app, { dataDir: DATA_DIR });
 
 app.use(
   "/fonts/geist-sans",
@@ -276,6 +278,9 @@ app.post("/api/upload", express.raw({ type: "*/*", limit: "50mb" }), async (req,
 });
 
 app.get("/health", (req, res) => {
+  if (req.get("accept")?.includes("text/html")) {
+    return res.sendFile(path.join(PUBLIC_DIR, "health.html"));
+  }
   res.status(200).json({ status: "ok" });
 });
 
