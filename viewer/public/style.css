@@ -169,6 +169,7 @@ feed-page {
   justify-content: center;
   width: 32px;
   height: 32px;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--fg-muted);
@@ -180,7 +181,7 @@ feed-page {
 }
 
 .header-settings .material-symbols-outlined {
-  font-size: 22px;
+  font-size: 24px;
 }
 
 .settings-dialog {
@@ -246,11 +247,15 @@ feed-page {
 
 .header-hamburger {
   display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   background: none;
   border: none;
   color: var(--fg);
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   line-height: 1;
 }
 
@@ -1548,7 +1553,7 @@ feed-page {
   }
 
   .header-hamburger {
-    display: block;
+    display: flex;
   }
 
   .header-nav {
