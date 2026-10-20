@@ -1750,15 +1750,45 @@ heatmap-page {
 }
 
 .heatmap-map {
+  position: relative;
   flex: 1;
   min-height: 0;
   margin: 0 1rem 0.75rem;
 }
 
-.heatmap-map .heatmap-error {
-  padding: 1rem;
-  color: var(--text-secondary, #aaa);
+.heatmap-map .heatmap-canvas { position: absolute; inset: 0; }
+.heatmap-status {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: min(440px, calc(100% - 32px));
+  padding: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 40px #0004;
 }
+.heatmap-status[hidden], .heatmap-status [hidden] { display: none; }
+.heatmap-status strong { display: block; font-size: 16px; font-weight: 500; }
+.heatmap-status p { margin: 8px 0 0; color: var(--fg-muted); font-size: 14px; line-height: 1.5; }
+.heatmap-loading-indicator {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: heatmap-loading-spin 900ms linear infinite;
+}
+.heatmap-status button { margin-top: 16px; padding: 8px 14px; border: 1px solid var(--border); color: var(--fg); background: var(--bg); font: inherit; font-size: 14px; cursor: pointer; }
+.heatmap-status button:hover { border-color: var(--fg); }
+.heatmap-status button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@keyframes heatmap-loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .heatmap-loading-indicator { animation: none; } }
 
 /* Planned races stay distinct from recorded activities. */
 .calendar-race{display:block;border-left:2px solid var(--accent);padding:4px 6px;margin:5px 0;color:var(--accent);font-size:12px;line-height:1.35;text-decoration:none;overflow-wrap:anywhere}

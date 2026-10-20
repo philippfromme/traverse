@@ -44,16 +44,41 @@ const CIRCLE_COLOR = "#00d230";
 class HeatmapMap extends HTMLElement {
   connectedCallback() {
     this._map = null;
-    this._requestId = 0;
+    this._requestId ||= 0;
     this.style.display = "block";
+    this._canvas = document.createElement('div');
+    this._canvas.className = 'heatmap-canvas';
+    this._status = document.createElement('div');
+    this._status.className = 'heatmap-status';
+    this._status.setAttribute('role', 'status');
+    this._status.setAttribute('aria-live', 'polite');
+    this._status.setAttribute('aria-atomic', 'true');
+    this._indicator = document.createElement('span');
+    this._indicator.className = 'heatmap-loading-indicator';
+    this._indicator.setAttribute('aria-hidden', 'true');
+    const copy = document.createElement('div');
+    this._statusTitle = document.createElement('strong');
+    this._statusDescription = document.createElement('p');
+    this._retry = document.createElement('button');
+    this._retry.type = 'button';
+    this._retry.textContent = 'Try again';
+    this._retry.addEventListener('click', () => this.reload(this._requestedType, this._requestedMode));
+    copy.append(this._statusTitle, this._statusDescription, this._retry);
+    this._status.append(this._indicator, copy);
+    this.replaceChildren(this._canvas, this._status);
     this._onStyleChange = () => {
-      if (this._data) this._render(this._data, this._type, this._mode);
+      if (this._data && !this._fetching) {
+        try { this._render(this._data, this._type, this._mode); }
+        catch { this._showError(); }
+      }
     };
     window.addEventListener(MAP_STYLE_CHANGE_EVENT, this._onStyleChange);
     this.reload("", new URLSearchParams(location.search).get("view") === "tracks" ? "tracks" : "heatmap");
   }
 
   disconnectedCallback() {
+    ++this._requestId;
+    this._request?.abort();
     window.removeEventListener(MAP_STYLE_CHANGE_EVENT, this._onStyleChange);
     if (this._map) {
       this._map.remove();
@@ -61,28 +86,45 @@ class HeatmapMap extends HTMLElement {
     }
   }
 
+  _showStatus(title, description, state = 'loading') {
+    this._status.hidden = false;
+    this._status.classList.toggle('is-loading', state === 'loading');
+    this._statusTitle.textContent = title;
+    this._statusDescription.textContent = description;
+    this._indicator.hidden = state !== 'loading';
+    this._retry.hidden = state !== 'error';
+    this._canvas.setAttribute('aria-busy', String(state === 'loading'));
+  }
+
+  _showError() {
+    const label = this._requestedMode === 'tracks' ? 'Tracks' : 'Heatmap';
+    this._showStatus(`${label} could not load`, 'Check your connection and try again.', 'error');
+  }
+
   async reload(type = "", mode = "heatmap") {
     const requestId = ++this._requestId;
+    this._request?.abort();
+    const request = new AbortController();
+    this._request = request;
+    this._requestedType = type;
+    this._requestedMode = mode;
+    this._fetching = true;
+    this._showStatus(mode === 'tracks' ? 'Loading tracks…' : 'Loading heatmap…',
+      'Fetching your activity locations. Large activity histories can take a little while.');
     const url = mode === "tracks"
       ? "/api/tracks"
       : type ? `/api/heatmap?type=${encodeURIComponent(type)}` : "/api/heatmap";
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: request.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (requestId !== this._requestId || !this.isConnected) return;
+      this._fetching = false;
       this._render(data, type, mode);
     } catch (err) {
       if (requestId !== this._requestId || !this.isConnected) return;
-      if (this._map) this._map.remove();
-      this._map = null;
-      this.replaceChildren();
-      const message = document.createElement("div");
-      message.className = "heatmap-error";
-      message.textContent = mode === "tracks"
-        ? `Tracks could not load (${err.message}). Restart the viewer and try again.`
-        : `Heatmap could not load (${err.message}).`;
-      this.append(message);
+      this._fetching = false;
+      this._showError();
     }
   }
 
@@ -90,6 +132,9 @@ class HeatmapMap extends HTMLElement {
     this._data = data;
     this._type = type;
     this._mode = mode;
+    const requestId = this._requestId;
+    this._showStatus(mode === 'tracks' ? 'Drawing tracks…' : 'Drawing heatmap…',
+      'Loading map tiles and drawing your activity history.');
     const camera = this._map ? {
       center: this._map.getCenter(),
       zoom: this._map.getZoom(),
@@ -100,11 +145,14 @@ class HeatmapMap extends HTMLElement {
       this._map.remove();
       this._map = null;
     }
-    this.replaceChildren();
+    this._canvas.replaceChildren();
 
     let bounds = data.bounds;
     if (mode === "heatmap") {
-      if (!data.features.length) return;
+      if (!data.features.length) {
+        this._showStatus('No activity locations', 'No GPS data is available for this activity type. Try another filter.', 'empty');
+        return;
+      }
       let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
       for (const feature of data.features) {
         const [lng, lat] = feature.geometry.coordinates;
@@ -113,20 +161,33 @@ class HeatmapMap extends HTMLElement {
       }
       bounds = [[minLng, minLat], [maxLng, maxLat]];
     }
-    if (!bounds && !camera) return;
+    if (!bounds) {
+      this._showStatus('No tracks available', 'No GPS tracks are available yet.', 'empty');
+      return;
+    }
 
     const map = new maplibregl.Map({
-      container: this,
+      container: this._canvas,
       style: getMapStyle({ contours: false, terrain: false }),
       ...(camera || { bounds, fitBoundsOptions: { padding: 30 } }),
     });
 
     map.on("load", () => {
-      if (mode === "tracks") {
-        this._addTrackLayers(map, data, type);
-      } else {
-        this._addHeatmapLayers(map, data.features);
-      }
+      if (this._map !== map || requestId !== this._requestId) return;
+      try {
+        if (mode === "tracks") this._addTrackLayers(map, data, type);
+        else this._addHeatmapLayers(map, data.features);
+        // Source processing and initial tiles finish after the map's load event.
+        map.once('idle', () => {
+          if (this._map !== map || requestId !== this._requestId || !this.isConnected) return;
+          this._canvas.setAttribute('aria-busy', 'false');
+          this._status.hidden = true;
+        });
+      } catch { this._showError(); }
+    });
+
+    map.on('error', () => {
+      if (this._map === map && requestId === this._requestId && !this._status.hidden) this._showError();
     });
 
     this._map = map;
